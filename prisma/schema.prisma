@@ -1,0 +1,88 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id         String   @id @default(cuid())
+  nombre     String
+  email      String   @unique
+  password   String
+  createdAt  DateTime @default(now())
+  clientes   Cliente[]
+}
+
+model Cliente {
+  id        String    @id @default(cuid())
+  nombre    String
+  nif       String    @unique
+  email     String?
+  telefono  String?
+  tipo      String    // "autonomo" o "empresa"
+  usuarioId String
+  usuario   Usuario   @relation(fields: [usuarioId], references: [id])
+  maquinas  Maquina[]
+  facturas  Factura[]
+  createdAt DateTime  @default(now())
+}
+
+model Maquina {
+  id          String   @id @default(cuid())
+  nombre      String
+  modelo      String?
+  serie       String?
+  year        Int?
+  km          Int?
+  horas       Int?
+  estado      String   @default("operativa")
+  clienteId   String
+  cliente     Cliente  @relation(fields: [clienteId], references: [id])
+  partes      Parte[]
+  createdAt   DateTime @default(now())
+}
+
+model Parte {
+  id              String   @id @default(cuid())
+  numero          String   @unique
+  fecha           DateTime @default(now())
+  kmActuales      Int?
+  kmDesplazamiento Int?
+  horaEntrada     String?
+  horaSalida      String?
+  horasTrabajadas Float?
+  precioHora      Float    @default(55)
+  observaciones   String?
+  maquinaId       String
+  maquina         Maquina  @relation(fields: [maquinaId], references: [id])
+  piezas          Pieza[]
+  factura         Factura? @relation(fields: [facturaId], references: [id])
+  facturaId       String?
+  createdAt       DateTime @default(now())
+}
+
+model Pieza {
+  id          String  @id @default(cuid())
+  referencia  String?
+  descripcion String
+  cantidad    Int     @default(1)
+  precioCoste Float
+  precioVenta Float
+  parteId     String
+  parte       Parte   @relation(fields: [parteId], references: [id])
+}
+
+model Factura {
+  id         String   @id @default(cuid())
+  numero     String   @unique
+  fecha      DateTime @default(now())
+  vencimiento DateTime?
+  estado     String   @default("pendiente")
+  clienteId  String
+  cliente    Cliente  @relation(fields: [clienteId], references: [id])
+  partes     Parte[]
+  createdAt  DateTime @default(now())
+}
