@@ -7,25 +7,30 @@ export async function POST(req: Request) {
     const session = await auth();
     if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-    const { nombre, nif, email, telefono, tipo, direccion } = await req.json();
+    const { nombre, razonSocial, cif, email, telefono, tipo, direccionFacturacion, formaPago, observaciones, precioHoraEspecial } = await req.json();
 
-    if (!nombre || !nif || !tipo) {
-      return NextResponse.json({ error: "Nombre, NIF y tipo son obligatorios" }, { status: 400 });
+    if (!nombre || !cif || !tipo) {
+      return NextResponse.json({ error: "Nombre, CIF y tipo son obligatorios" }, { status: 400 });
     }
 
-    const existe = await prisma.cliente.findUnique({ where: { nif } });
+    const existe = await prisma.cliente.findUnique({ where: { cif } });
     if (existe) {
-      return NextResponse.json({ error: "Ya existe un cliente con ese NIF" }, { status: 400 });
+      return NextResponse.json({ error: "Ya existe un cliente con ese CIF" }, { status: 400 });
     }
 
     const cliente = await prisma.cliente.create({
       data: {
         nombre,
-        nif,
+        razonSocial: razonSocial || null,
+        cif,
         email: email || null,
         telefono: telefono || null,
         tipo,
-        usuarioId: session.user?.id as string,
+        direccionFacturacion: direccionFacturacion || null,
+        formaPago: formaPago || "Transferencia bancaria",
+        observaciones: observaciones || null,
+        precioHoraEspecial: precioHoraEspecial ? parseFloat(precioHoraEspecial) : null,
+        usuarioId: (session.user as any).id as string,
       },
     });
 
@@ -42,7 +47,7 @@ export async function GET() {
     if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
     const clientes = await prisma.cliente.findMany({
-      where: { usuarioId: session.user?.id as string },
+      where: { usuarioId: (session.user as any).id as string },
       orderBy: { createdAt: "desc" },
     });
 
