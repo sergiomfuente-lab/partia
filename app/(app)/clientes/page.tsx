@@ -82,7 +82,7 @@ export default async function ClientesPage() {
                     </div>
                     <div>
                       <div className="text-sm font-medium text-gray-800">{cliente.nombre}</div>
-                      <div className="text-xs text-gray-400">{cliente.nif}</div>
+                      <div className="text-xs text-gray-400">{cliente.cif}</div>
                     </div>
                   </div>
                 </div>
