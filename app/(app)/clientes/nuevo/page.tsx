@@ -47,26 +47,6 @@ export default function NuevoClientePage() {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <aside className="w-56 bg-[#0B1120] flex flex-col p-4 fixed h-full">
-        <div className="flex items-center gap-2 mb-8 pb-4 border-b border-[#1e2d42]">
-          <svg width="24" height="24" viewBox="0 0 56 56">
-            <polygon points="28,4 50,16 50,40 28,52 6,40 6,16" fill="none" stroke="#00C2FF" strokeWidth="2.5"/>
-            <circle cx="28" cy="28" r="7" fill="#00C2FF"/>
-            <circle cx="28" cy="28" r="3.5" fill="#0B1120"/>
-          </svg>
-          <span className="text-white font-bold text-base tracking-wide">Partia</span>
-        </div>
-        <nav className="flex flex-col gap-1 flex-1">
-          <a href="/dashboard" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Dashboard</a>
-          <a href="/clientes" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm bg-[#162030] text-[#00C2FF]">Clientes</a>
-          <a href="/maquinas" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Máquinas</a>
-          <a href="/partes" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Partes</a>
-          <a href="/facturas" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Facturas</a>
-          <a href="/compras" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Compras</a>
-          <a href="/configuracion" className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-[#6a8aaa] hover:text-white">Configuración</a>
-        </nav>
-      </aside>
-
       <main className="ml-56 flex-1 p-6">
         <div className="flex items-center gap-3 mb-6">
           <button onClick={() => router.back()} className="text-sm text-gray-400 hover:text-gray-600">← Volver</button>
