@@ -39,18 +39,10 @@ export async function PUT(req: NextRequest) {
 
   const body = await req.json();
   const {
-    nombre,
-    precioHora,
-    precioPorKm,
-    nombreFiscal,
-    cifNif,
-    direccionFiscal,
-    codigoPostal,
-    ciudad,
-    provincia,
-    telefono,
-    emailFacturacion,
-    iban,
+    nombre, precioHora, precioPorKm,
+    nombreFiscal, cifNif, direccionFiscal,
+    codigoPostal, ciudad, provincia,
+    telefono, emailFacturacion, iban,
   } = body;
 
   const updated = await prisma.usuario.update({

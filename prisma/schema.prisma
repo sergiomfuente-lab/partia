@@ -7,6 +7,14 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model ConfiguracionEmpresa {
+  id        String   @id @default(cuid())
+  textoRgpd String?
+  logoBase64 String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
 model Usuario {
   id               String    @id @default(cuid())
   nombre           String
@@ -29,12 +37,12 @@ model Usuario {
 }
 
 model ContadorFactura {
-  id         String   @id @default(cuid())
-  anio       Int
-  contador   Int      @default(0)
-  usuarioId  String
-  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
-  createdAt  DateTime @default(now())
+  id        String   @id @default(cuid())
+  anio      Int
+  contador  Int      @default(0)
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt DateTime @default(now())
 
   @@unique([usuarioId, anio])
 }
@@ -130,20 +138,20 @@ model Repuesto {
 }
 
 model Factura {
-  id              String    @id @default(cuid())
-  numero          String    @unique
-  fecha           DateTime  @default(now())
-  vencimiento     DateTime?
-  estado          String    @default("pendiente")
-  baseImponible   Float     @default(0)
-  descuento       Float     @default(0)
-  tipoDescuento   String    @default("euro")
-  descuentoValor  Float     @default(0)
-  iva             Float     @default(21)
-  total           Float     @default(0)
-  notas           String?
-  clienteId       String
-  cliente         Cliente   @relation(fields: [clienteId], references: [id])
-  ordenes         Orden[]
-  createdAt       DateTime  @default(now())
+  id             String    @id @default(cuid())
+  numero         String    @unique
+  fecha          DateTime  @default(now())
+  vencimiento    DateTime?
+  estado         String    @default("pendiente")
+  baseImponible  Float     @default(0)
+  descuento      Float     @default(0)
+  tipoDescuento  String    @default("euro")
+  descuentoValor Float     @default(0)
+  iva            Float     @default(21)
+  total          Float     @default(0)
+  notas          String?
+  clienteId      String
+  cliente        Cliente   @relation(fields: [clienteId], references: [id])
+  ordenes        Orden[]
+  createdAt      DateTime  @default(now())
 }
