@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { Wrench, ClipboardList } from "lucide-react";
 
 interface Props {
   cliente: any;
@@ -13,10 +14,23 @@ export default function ClienteDetalle({ cliente }: Props) {
 
   const pestanas = [
     { id: "informacion", label: "Información" },
-    { id: "maquinas", label: `Máquinas (${cliente.maquinas.length})` },
-    { id: "ordenes", label: `Órdenes (${cliente.ordenes.length})` },
-    { id: "facturas", label: `Facturas (${cliente.facturas.length})` },
+    { id: "maquinas",   label: `Máquinas (${cliente.maquinas.length})` },
+    { id: "ordenes",    label: `Órdenes (${cliente.ordenes.length})` },
+    { id: "facturas",   label: `Facturas (${cliente.facturas.length})` },
   ];
+
+  // Calcular totales de horas y km sumando servicios de todas las órdenes
+  const totalHoras = cliente.ordenes.reduce((acc: number, orden: any) =>
+    acc + orden.servicios
+      .filter((s: any) => s.tipoServicio.unidad === "h")
+      .reduce((a: number, s: any) => a + s.cantidad, 0)
+  , 0);
+
+  const totalKm = cliente.ordenes.reduce((acc: number, orden: any) =>
+    acc + orden.servicios
+      .filter((s: any) => s.tipoServicio.unidad === "km")
+      .reduce((a: number, s: any) => a + s.cantidad, 0)
+  , 0);
 
   return (
     <div className="p-8">
@@ -65,8 +79,8 @@ export default function ClienteDetalle({ cliente }: Props) {
         </div>
       </div>
 
-      {/* Tarjetas resumen */}
-      <div className="grid grid-cols-4 gap-4 mb-6">
+      {/* Tarjetas resumen — ahora 6 tarjetas */}
+      <div className="grid grid-cols-6 gap-4 mb-6">
         <div className="bg-white rounded-xl border border-gray-100 p-4">
           <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Máquinas</div>
           <div className="text-2xl font-semibold text-gray-900">{cliente.maquinas.length}</div>
@@ -83,6 +97,20 @@ export default function ClienteDetalle({ cliente }: Props) {
           <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Precio/hora</div>
           <div className="text-2xl font-semibold text-gray-900">
             {cliente.precioHoraEspecial ? `${cliente.precioHoraEspecial}€` : "Estándar"}
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total horas</div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {totalHoras.toLocaleString("es-ES")}
+            <span className="text-sm font-normal text-gray-400 ml-1">h</span>
+          </div>
+        </div>
+        <div className="bg-white rounded-xl border border-gray-100 p-4">
+          <div className="text-xs text-gray-400 uppercase tracking-wide mb-1">Total km</div>
+          <div className="text-2xl font-semibold text-gray-900">
+            {totalKm.toLocaleString("es-ES")}
+            <span className="text-sm font-normal text-gray-400 ml-1">km</span>
           </div>
         </div>
       </div>
@@ -160,7 +188,6 @@ export default function ClienteDetalle({ cliente }: Props) {
                 </div>
               </div>
             </div>
-
             {cliente.observaciones && (
               <div className="bg-white rounded-xl border border-gray-100 p-6">
                 <h3 className="text-sm font-semibold text-gray-700 mb-3">Observaciones</h3>
@@ -168,7 +195,6 @@ export default function ClienteDetalle({ cliente }: Props) {
               </div>
             )}
           </div>
-
           <div className="space-y-6">
             <div className="bg-white rounded-xl border border-gray-100 p-6">
               <h3 className="text-sm font-semibold text-gray-700 mb-4 pb-3 border-b border-gray-100">Contacto</h3>
@@ -194,7 +220,7 @@ export default function ClienteDetalle({ cliente }: Props) {
             <p className="text-sm text-gray-500">{cliente.maquinas.length} máquinas registradas</p>
             <button
               onClick={() => router.push(`/maquinas/nueva?clienteId=${cliente.id}`)}
-              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030]"
+              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030] transition-colors"
             >
               + Nueva máquina
             </button>
@@ -202,7 +228,7 @@ export default function ClienteDetalle({ cliente }: Props) {
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             {cliente.maquinas.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-4xl mb-3">⚙️</div>
+                <Wrench size={48} className="mx-auto text-gray-200 mb-4" />
                 <p className="text-gray-400 text-sm mb-3">No hay máquinas registradas</p>
                 <button
                   onClick={() => router.push(`/maquinas/nueva?clienteId=${cliente.id}`)}
@@ -232,15 +258,20 @@ export default function ClienteDetalle({ cliente }: Props) {
                       <td className="px-5 py-4 text-sm text-gray-800">{maquina.horasActuales}h</td>
                       <td className="px-5 py-4">
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                          maquina.estado === "activo" ? "bg-green-50 text-green-700" : "bg-red-50 text-red-700"
+                          maquina.estado === "activo"
+                            ? "bg-green-50 text-green-700"
+                            : maquina.estado === "en_reparacion"
+                            ? "bg-amber-50 text-amber-700"
+                            : "bg-gray-100 text-gray-500"
                         }`}>
-                          {maquina.estado === "activo" ? "Activo" : "Inactivo"}
+                          {maquina.estado === "activo" ? "Activo" :
+                           maquina.estado === "en_reparacion" ? "En reparación" : "Inactivo"}
                         </span>
                       </td>
                       <td className="px-5 py-4">
                         <button
                           onClick={() => router.push(`/maquinas/${maquina.id}`)}
-                          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition-colors"
+                          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           Ver
                         </button>
@@ -261,7 +292,7 @@ export default function ClienteDetalle({ cliente }: Props) {
             <p className="text-sm text-gray-500">{cliente.ordenes.length} órdenes registradas</p>
             <button
               onClick={() => router.push(`/ordenes/nueva?clienteId=${cliente.id}`)}
-              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030]"
+              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030] transition-colors"
             >
               + Nueva orden
             </button>
@@ -269,7 +300,7 @@ export default function ClienteDetalle({ cliente }: Props) {
           <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
             {cliente.ordenes.length === 0 ? (
               <div className="text-center py-16">
-                <div className="text-4xl mb-3">📋</div>
+                <ClipboardList size={48} className="mx-auto text-gray-200 mb-4" />
                 <p className="text-gray-400 text-sm mb-3">No hay órdenes registradas</p>
                 <button
                   onClick={() => router.push(`/ordenes/nueva?clienteId=${cliente.id}`)}
@@ -285,39 +316,52 @@ export default function ClienteDetalle({ cliente }: Props) {
                     <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Nº Orden</th>
                     <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Fecha</th>
                     <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Máquina</th>
-                    <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Horas</th>
-                    <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Km</th>
+                    <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3 text-center">Horas</th>
+                    <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3 text-center">Km</th>
                     <th className="text-left text-xs text-gray-400 uppercase tracking-wide px-5 py-3">Estado</th>
                     <th className="px-5 py-3"></th>
                   </tr>
                 </thead>
                 <tbody>
-                  {cliente.ordenes.map((orden: any) => (
-                    <tr key={orden.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                      <td className="px-5 py-4 text-sm font-medium text-[#185FA5]">{orden.numero}</td>
-                      <td className="px-5 py-4 text-sm text-gray-500">{new Date(orden.fecha).toLocaleDateString("es-ES")}</td>
-                      <td className="px-5 py-4 text-sm text-gray-800">{orden.maquina.marca} {orden.maquina.modelo}</td>
-                      <td className="px-5 py-4 text-sm text-gray-800">{orden.horasTrabajadas}h</td>
-                      <td className="px-5 py-4 text-sm text-gray-800">{orden.kmDesplazamiento} km</td>
-                      <td className="px-5 py-4">
-                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                          orden.estado === "completado" ? "bg-green-50 text-green-700" :
-                          orden.estado === "pendiente" ? "bg-yellow-50 text-yellow-700" :
-                          "bg-blue-50 text-blue-700"
-                        }`}>
-                          {orden.estado}
-                        </span>
-                      </td>
-                      <td className="px-5 py-4">
-                        <button
-                          onClick={() => router.push(`/ordenes/${orden.id}`)}
-                          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50"
-                        >
-                          Ver
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
+                  {cliente.ordenes.map((orden: any) => {
+                    const horas = orden.servicios
+                      .filter((s: any) => s.tipoServicio.unidad === "h")
+                      .reduce((a: number, s: any) => a + s.cantidad, 0);
+                    const km = orden.servicios
+                      .filter((s: any) => s.tipoServicio.unidad === "km")
+                      .reduce((a: number, s: any) => a + s.cantidad, 0);
+                    return (
+                      <tr key={orden.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                        <td className="px-5 py-4 text-sm font-medium text-[#185FA5]">{orden.numero}</td>
+                        <td className="px-5 py-4 text-sm text-gray-500">{new Date(orden.fecha).toLocaleDateString("es-ES")}</td>
+                        <td className="px-5 py-4 text-sm text-gray-800">{orden.maquina.marca} {orden.maquina.modelo}</td>
+                        <td className="px-5 py-4 text-sm text-gray-800 text-center">
+                          {horas > 0 ? `${horas}h` : "—"}
+                        </td>
+                        <td className="px-5 py-4 text-sm text-gray-800 text-center">
+                          {km > 0 ? `${km} km` : "—"}
+                        </td>
+                        <td className="px-5 py-4">
+                          <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
+                            orden.estado === "completado" ? "bg-green-50 text-green-700" :
+                            orden.estado === "pendiente"  ? "bg-yellow-50 text-yellow-700" :
+                            "bg-blue-50 text-blue-700"
+                          }`}>
+                            {orden.estado === "completado" ? "Completado" :
+                             orden.estado === "pendiente"  ? "Pendiente" : "En curso"}
+                          </span>
+                        </td>
+                        <td className="px-5 py-4">
+                          <button
+                            onClick={() => router.push(`/ordenes/${orden.id}`)}
+                            className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer"
+                          >
+                            Ver
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
@@ -332,7 +376,7 @@ export default function ClienteDetalle({ cliente }: Props) {
             <p className="text-sm text-gray-500">{cliente.facturas.length} facturas emitidas</p>
             <button
               onClick={() => router.push(`/facturas/nueva?clienteId=${cliente.id}`)}
-              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030]"
+              className="bg-[#0B1120] text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-[#162030] transition-colors"
             >
               + Nueva factura
             </button>
@@ -370,8 +414,8 @@ export default function ClienteDetalle({ cliente }: Props) {
                       <td className="px-5 py-4 text-sm font-semibold text-gray-800">{factura.total.toFixed(2)}€</td>
                       <td className="px-5 py-4">
                         <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
-                          factura.estado === "cobrada" ? "bg-green-50 text-green-700" :
-                          factura.estado === "pendiente" ? "bg-yellow-50 text-yellow-700" :
+                          factura.estado === "cobrada"  ? "bg-green-50 text-green-700" :
+                          factura.estado === "pendiente"? "bg-yellow-50 text-yellow-700" :
                           "bg-red-50 text-red-700"
                         }`}>
                           {factura.estado}
@@ -380,7 +424,7 @@ export default function ClienteDetalle({ cliente }: Props) {
                       <td className="px-5 py-4">
                         <button
                           onClick={() => router.push(`/facturas/${factura.id}`)}
-                          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50"
+                          className="text-xs border border-gray-200 rounded-lg px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition-colors cursor-pointer"
                         >
                           Ver
                         </button>

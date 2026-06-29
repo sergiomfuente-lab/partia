@@ -1,0 +1,29 @@
+import { auth } from "@/auth";
+import { redirect } from "next/navigation";
+import { prisma } from "@/lib/prisma";
+import MaquinaDetalle from "./MaquinaDetalle";
+
+export default async function MaquinaDetallePage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await auth();
+  if (!session?.user?.id) redirect("/login");
+
+  const { id } = await params;
+
+  const maquina = await prisma.maquina.findFirst({
+    where: { id, cliente: { usuarioId: session.user!.id } },
+    include: {
+      cliente: true,
+      ordenes: {
+        orderBy: { fecha: "desc" },
+        include: {
+          repuestos: true,
+          _count: { select: { repuestos: true } },
+        },
+      },
+    },
+  });
+
+  if (!maquina) redirect("/maquinas");
+
+  return <MaquinaDetalle maquina={JSON.parse(JSON.stringify(maquina))} />;
+}

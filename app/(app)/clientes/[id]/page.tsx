@@ -14,7 +14,12 @@ export default async function ClienteDetallePage({ params }: { params: Promise<{
     include: {
       maquinas: true,
       ordenes: {
-        include: { maquina: true },
+        include: {
+          maquina: true,
+          servicios: {
+            include: { tipoServicio: true },
+          },
+        },
         orderBy: { createdAt: "desc" },
       },
       facturas: {

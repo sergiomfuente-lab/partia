@@ -8,70 +8,114 @@ datasource db {
 }
 
 model Usuario {
-  id          String    @id @default(cuid())
-  nombre      String
-  email       String    @unique
-  password    String
-  precioHora  Float     @default(55)
-  precioPorKm Float     @default(0.35)
-  createdAt   DateTime  @default(now())
-  clientes    Cliente[]
+  id               String    @id @default(cuid())
+  nombre           String
+  email            String    @unique
+  password         String
+  precioHora       Float     @default(55)
+  precioPorKm      Float     @default(0.35)
+  nombreFiscal     String?
+  cifNif           String?
+  direccionFiscal  String?
+  codigoPostal     String?
+  ciudad           String?
+  provincia        String?
+  telefono         String?
+  emailFacturacion String?
+  iban             String?
+  createdAt        DateTime  @default(now())
+  clientes         Cliente[]
+  contadores       ContadorFactura[]
+}
+
+model ContadorFactura {
+  id         String   @id @default(cuid())
+  anio       Int
+  contador   Int      @default(0)
+  usuarioId  String
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([usuarioId, anio])
 }
 
 model Cliente {
-  id                  String    @id @default(cuid())
-  nombre              String
-  razonSocial         String?
-  cif                 String    @unique
+  id                   String    @id @default(cuid())
+  nombre               String
+  razonSocial          String?
+  cif                  String    @unique
   direccionFacturacion String?
-  formaPago           String?   @default("Transferencia bancaria")
-  email               String?
-  telefono            String?
-  tipo                String    @default("empresa")
-  observaciones       String?
-  precioHoraEspecial  Float?
-  activo              Boolean   @default(true)
-  usuarioId           String
-  usuario             Usuario   @relation(fields: [usuarioId], references: [id])
-  maquinas            Maquina[]
-  facturas            Factura[]
-  ordenes             Orden[]
-  createdAt           DateTime  @default(now())
+  formaPago            String?   @default("Transferencia bancaria")
+  email                String?
+  telefono             String?
+  tipo                 String    @default("empresa")
+  observaciones        String?
+  precioHoraEspecial   Float?
+  precioPorKmEspecial  Float?
+  activo               Boolean   @default(true)
+  usuarioId            String
+  usuario              Usuario   @relation(fields: [usuarioId], references: [id])
+  maquinas             Maquina[]
+  facturas             Factura[]
+  ordenes              Orden[]
+  createdAt            DateTime  @default(now())
 }
 
 model Maquina {
-  id            String   @id @default(cuid())
-  marca         String
-  modelo        String
-  numeroDeSerie String
-  horasIniciales Float   @default(0)
-  horasActuales  Float   @default(0)
+  id             String   @id @default(cuid())
+  marca          String
+  modelo         String
+  numeroDeSerie  String
+  horasIniciales Float    @default(0)
+  horasActuales  Float    @default(0)
   observaciones  String?
-  estado        String   @default("activo")
-  clienteId     String
-  cliente       Cliente  @relation(fields: [clienteId], references: [id])
-  ordenes       Orden[]
-  createdAt     DateTime @default(now())
+  estado         String   @default("activo")
+  clienteId      String
+  cliente        Cliente  @relation(fields: [clienteId], references: [id])
+  ordenes        Orden[]
+  createdAt      DateTime @default(now())
+}
+
+model TipoServicio {
+  id        String     @id @default(cuid())
+  nombre    String
+  unidad    String     @default("ud")
+  activo    Boolean    @default(true)
+  orden     Int        @default(0)
+  createdAt DateTime   @default(now())
+  servicios Servicio[]
 }
 
 model Orden {
-  id              String   @id @default(cuid())
-  numero          String   @unique
-  fecha           DateTime @default(now())
-  kmDesplazamiento Float   @default(0)
-  horasTrabajadas  Float   @default(0)
-  precioHora      Float    @default(55)
-  precioPorKm     Float    @default(0.35)
-  observaciones   String?
-  estado          String   @default("pendiente")
-  clienteId       String
-  cliente         Cliente  @relation(fields: [clienteId], references: [id])
-  maquinaId       String
-  maquina         Maquina  @relation(fields: [maquinaId], references: [id])
-  repuestos       Repuesto[]
-  facturaId       String?
-  factura         Factura?  @relation(fields: [facturaId], references: [id])
-  createdAt       DateTime @default(now())
+  id                  String     @id @default(cuid())
+  numero              String     @unique
+  fecha               DateTime   @default(now())
+  direccionReparacion String?
+  trabajosRealizados  String?
+  observaciones       String?
+  estado              String     @default("pendiente")
+  clienteId           String
+  cliente             Cliente    @relation(fields: [clienteId], references: [id])
+  maquinaId           String
+  maquina             Maquina    @relation(fields: [maquinaId], references: [id])
+  servicios           Servicio[]
+  repuestos           Repuesto[]
+  facturaId           String?
+  factura             Factura?   @relation(fields: [facturaId], references: [id])
+  createdAt           DateTime   @default(now())
+}
+
+model Servicio {
+  id             String       @id @default(cuid())
+  fecha          DateTime     @default(now())
+  tipoServicioId String
+  tipoServicio   TipoServicio @relation(fields: [tipoServicioId], references: [id])
+  cantidad       Float        @default(0)
+  precio         Float        @default(0)
+  descripcion    String?
+  ordenId        String
+  orden          Orden        @relation(fields: [ordenId], references: [id])
+  createdAt      DateTime     @default(now())
 }
 
 model Repuesto {
@@ -86,16 +130,20 @@ model Repuesto {
 }
 
 model Factura {
-  id          String    @id @default(cuid())
-  numero      String    @unique
-  fecha       DateTime  @default(now())
-  vencimiento DateTime?
-  estado      String    @default("pendiente")
-  baseImponible Float   @default(0)
-  iva         Float     @default(21)
-  total       Float     @default(0)
-  clienteId   String
-  cliente     Cliente   @relation(fields: [clienteId], references: [id])
-  ordenes     Orden[]
-  createdAt   DateTime  @default(now())
+  id              String    @id @default(cuid())
+  numero          String    @unique
+  fecha           DateTime  @default(now())
+  vencimiento     DateTime?
+  estado          String    @default("pendiente")
+  baseImponible   Float     @default(0)
+  descuento       Float     @default(0)
+  tipoDescuento   String    @default("euro")
+  descuentoValor  Float     @default(0)
+  iva             Float     @default(21)
+  total           Float     @default(0)
+  notas           String?
+  clienteId       String
+  cliente         Cliente   @relation(fields: [clienteId], references: [id])
+  ordenes         Orden[]
+  createdAt       DateTime  @default(now())
 }
