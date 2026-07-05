@@ -9,23 +9,24 @@ export default async function NuevaOrdenPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const [clientes, tiposServicio, usuario] = await Promise.all([
+  const empresaId = (session.user as any).empresaId;
+
+  const [clientes, tiposServicio, empresa] = await Promise.all([
     prisma.cliente.findMany({
-      where: { usuarioId: session.user!.id, activo: true },
+      where:   { empresaId, activo: true },
       select: {
-        id: true,
-        nombre: true,
-        precioHoraEspecial: true,
+        id: true, nombre: true,
+        precioHoraEspecial:  true,
         precioPorKmEspecial: true,
       },
       orderBy: { nombre: "asc" },
     }),
     prisma.tipoServicio.findMany({
-      where: { activo: true },
-      orderBy: { orden: "asc" },
+      where:   { activo: true },
+      orderBy: { orden:  "asc" },
     }),
-    prisma.usuario.findUnique({
-      where: { id: session.user!.id },
+    prisma.empresa.findUnique({
+      where:  { id: empresaId },
       select: { precioHora: true, precioPorKm: true },
     }),
   ]);
@@ -34,8 +35,8 @@ export default async function NuevaOrdenPage() {
     <NuevaOrdenForm
       clientes={clientes}
       tiposServicio={tiposServicio}
-      precioHoraDefault={usuario?.precioHora ?? 55}
-      precioPorKmDefault={usuario?.precioPorKm ?? 0.35}
+      precioHoraDefault={empresa?.precioHora   ?? 55}
+      precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
     />
   );
 }
