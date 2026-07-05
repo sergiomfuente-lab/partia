@@ -5,12 +5,12 @@ import Link from "next/link";
 import {
   LayoutDashboard, Users, Wrench,
   ClipboardList, FileText, ShoppingCart,
-  Settings, UserCog, ShieldCheck,
+  Settings, UserCog, ShieldCheck, FileCheck,
 } from "lucide-react";
 
 interface Props {
-  userName?:       string | null;
-  rol?:            string | null;
+  userName?:        string | null;
+  rol?:             string | null;
   empresaActivaId?: string | null;
 }
 
@@ -55,6 +55,12 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
       roles: ["superadmin", "administrador", "tecnico", "administrativo"],
     },
     {
+      href:  "/presupuestos",
+      label: "Presupuestos",
+      icon:  <FileCheck className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+    },
+    {
       href:  "/ordenes",
       label: "Órdenes",
       icon:  <ClipboardList className="w-4 h-4" />,
@@ -86,11 +92,9 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
     },
   ];
 
-  // Para superadmin sin empresa activa solo mostrar superadmin
   const menuFiltrado = menu.filter((item) => {
     if (!rol) return false;
     if (!item.roles.includes(rol)) return false;
-    // Si es superadmin sin empresa activa solo ve superadmin
     if (rol === "superadmin" && !empresaActivaId && item.href !== "/superadmin") return false;
     return true;
   });

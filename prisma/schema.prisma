@@ -29,9 +29,11 @@ model Empresa {
   usuariosActivos  Usuario[] @relation("UsuarioEmpresaActiva")
   clientes         Cliente[]
   contadores       ContadorFactura[]
+  contadoresPresupuesto ContadorPresupuesto[]
   proveedores      Proveedor[]
   productos        Producto[]
   compras          Compra[]
+  presupuestos     Presupuesto[]
 }
 
 model Usuario {
@@ -61,43 +63,56 @@ model ContadorFactura {
   @@unique([empresaId, anio])
 }
 
+model ContadorPresupuesto {
+  id        String   @id @default(cuid())
+  anio      Int
+  contador  Int      @default(0)
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([empresaId, anio])
+}
+
 model Cliente {
-  id                   String    @id @default(cuid())
+  id                   String        @id @default(cuid())
   nombre               String
   razonSocial          String?
   cif                  String
   direccionFacturacion String?
-  formaPago            String?   @default("Transferencia bancaria")
+  formaPago            String?       @default("Transferencia bancaria")
   email                String?
   telefono             String?
-  tipo                 String    @default("empresa")
+  tipo                 String        @default("empresa")
   observaciones        String?
   precioHoraEspecial   Float?
   precioPorKmEspecial  Float?
-  activo               Boolean   @default(true)
+  activo               Boolean       @default(true)
   empresaId            String
-  empresa              Empresa   @relation(fields: [empresaId], references: [id])
+  empresa              Empresa       @relation(fields: [empresaId], references: [id])
   usuarioId            String?
-  usuario              Usuario?  @relation(fields: [usuarioId], references: [id])
+  usuario              Usuario?      @relation(fields: [usuarioId], references: [id])
   maquinas             Maquina[]
   facturas             Factura[]
   ordenes              Orden[]
-  createdAt            DateTime  @default(now())
+  presupuestos         Presupuesto[]
+  createdAt            DateTime      @default(now())
 }
 
 model Maquina {
-  id             String   @id @default(cuid())
+  id             String        @id @default(cuid())
   marca          String
   modelo         String
   numeroDeSerie  String
-  horasIniciales Float    @default(0)
-  horasActuales  Float    @default(0)
+  horasIniciales Float         @default(0)
+  horasActuales  Float         @default(0)
   observaciones  String?
-  estado         String   @default("activo")
+  estado         String        @default("activo")
   clienteId      String
-  cliente        Cliente  @relation(fields: [clienteId], references: [id])
+  cliente        Cliente       @relation(fields: [clienteId], references: [id])
   ordenes        Orden[]
-  createdAt      DateTime @default(now())
+  presupuestos   Presupuesto[]
+  createdAt      DateTime      @default(now())
 }
 
 model TipoServicio {
@@ -111,24 +126,27 @@ model TipoServicio {
 }
 
 model Orden {
-  id                  String            @id @default(cuid())
-  numero              String            @unique
-  fecha               DateTime          @default(now())
+  id                  String             @id @default(cuid())
+  numero              String             @unique
+  fecha               DateTime           @default(now())
   direccionReparacion String?
   trabajosRealizados  String?
   observaciones       String?
-  estado              String            @default("pendiente")
+  estado              String             @default("pendiente")
   clienteId           String
-  cliente             Cliente           @relation(fields: [clienteId], references: [id])
+  cliente             Cliente            @relation(fields: [clienteId], references: [id])
   maquinaId           String
-  maquina             Maquina           @relation(fields: [maquinaId], references: [id])
+  maquina             Maquina            @relation(fields: [maquinaId], references: [id])
   servicios           Servicio[]
+  serviciosLibres     ServicioLibre[]
   repuestos           Repuesto[]
   facturaId           String?
-  factura             Factura?          @relation(fields: [facturaId], references: [id])
+  factura             Factura?           @relation(fields: [facturaId], references: [id])
+  presupuestoId       String?
+  presupuesto         Presupuesto?       @relation(fields: [presupuestoId], references: [id])
   lineasCompra        CompraLinea[]
   movimientosStock    MovimientoStock[]
-  createdAt           DateTime          @default(now())
+  createdAt           DateTime           @default(now())
 }
 
 model Servicio {
@@ -144,15 +162,29 @@ model Servicio {
   createdAt      DateTime     @default(now())
 }
 
+model ServicioLibre {
+  id          String   @id @default(cuid())
+  descripcion String
+  cantidad    Float    @default(1)
+  precio      Float    @default(0)
+  ordenId     String?
+  orden       Orden?   @relation(fields: [ordenId], references: [id])
+  presupuestoId String?
+  presupuesto Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  createdAt   DateTime @default(now())
+}
+
 model Repuesto {
-  id          String  @id @default(cuid())
+  id          String   @id @default(cuid())
   referencia  String?
   descripcion String
-  cantidad    Int     @default(1)
+  cantidad    Int      @default(1)
   precioCoste Float
   precioVenta Float
-  ordenId     String
-  orden       Orden   @relation(fields: [ordenId], references: [id])
+  ordenId     String?
+  orden       Orden?   @relation(fields: [ordenId], references: [id])
+  presupuestoId String?
+  presupuesto Presupuesto? @relation(fields: [presupuestoId], references: [id])
 }
 
 model Factura {
@@ -172,6 +204,34 @@ model Factura {
   cliente        Cliente   @relation(fields: [clienteId], references: [id])
   ordenes        Orden[]
   createdAt      DateTime  @default(now())
+}
+
+model Presupuesto {
+  id                  String          @id @default(cuid())
+  numero              String          @unique
+  fecha               DateTime        @default(now())
+  validezHasta        DateTime?
+  estado              String          @default("borrador")
+  direccionReparacion String?
+  descripcion         String?
+  observaciones       String?
+  baseImponible       Float           @default(0)
+  descuento           Float           @default(0)
+  tipoDescuento       String          @default("euro")
+  descuentoValor      Float           @default(0)
+  iva                 Float           @default(21)
+  total               Float           @default(0)
+  notas               String?
+  clienteId           String
+  cliente             Cliente         @relation(fields: [clienteId], references: [id])
+  maquinaId           String?
+  maquina             Maquina?        @relation(fields: [maquinaId], references: [id])
+  empresaId           String
+  empresa             Empresa         @relation(fields: [empresaId], references: [id])
+  ordenes             Orden[]
+  serviciosLibres     ServicioLibre[]
+  repuestos           Repuesto[]
+  createdAt           DateTime        @default(now())
 }
 
 model Proveedor {
@@ -208,18 +268,18 @@ model Producto {
 }
 
 model Compra {
-  id              String       @id @default(cuid())
-  fecha           DateTime     @default(now())
+  id              String        @id @default(cuid())
+  fecha           DateTime      @default(now())
   numeroAlbaran   String?
   proveedorId     String?
-  proveedor       Proveedor?   @relation(fields: [proveedorId], references: [id])
+  proveedor       Proveedor?    @relation(fields: [proveedorId], references: [id])
   proveedorNombre String?
-  total           Float        @default(0)
+  total           Float         @default(0)
   observaciones   String?
   empresaId       String
-  empresa         Empresa      @relation(fields: [empresaId], references: [id])
+  empresa         Empresa       @relation(fields: [empresaId], references: [id])
   lineas          CompraLinea[]
-  createdAt       DateTime     @default(now())
+  createdAt       DateTime      @default(now())
 }
 
 model CompraLinea {
@@ -240,15 +300,15 @@ model CompraLinea {
 }
 
 model MovimientoStock {
-  id          String    @id @default(cuid())
+  id          String   @id @default(cuid())
   productoId  String
-  producto    Producto  @relation(fields: [productoId], references: [id])
+  producto    Producto @relation(fields: [productoId], references: [id])
   tipo        String
   cantidad    Float
-  precioCoste Float     @default(0)
+  precioCoste Float    @default(0)
   ordenId     String?
-  orden       Orden?    @relation(fields: [ordenId], references: [id])
+  orden       Orden?   @relation(fields: [ordenId], references: [id])
   compraId    String?
   motivo      String?
-  createdAt   DateTime  @default(now())
+  createdAt   DateTime @default(now())
 }
