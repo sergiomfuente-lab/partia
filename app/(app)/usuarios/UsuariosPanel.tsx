@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Users, Plus, Pencil, Power, PowerOff,
-  Save, X, Check,
+  Save, X, Check, KeyRound,
 } from "lucide-react";
 
 type Usuario = {
@@ -30,22 +30,24 @@ export default function UsuariosPanel({
   usuarios: Usuario[];
   rolActual: string;
 }) {
-  const router  = useRouter();
-  const [usuarios, setUsuarios] = useState<Usuario[]>(usuariosIniciales);
-  const [editando, setEditando] = useState<string | null>(null);
-  const [error, setError]       = useState("");
+  const router = useRouter();
+  const [usuarios, setUsuarios]         = useState<Usuario[]>(usuariosIniciales);
+  const [editando, setEditando]         = useState<string | null>(null);
+  const [error, setError]               = useState("");
 
   // Nuevo usuario
-  const [mostrarForm, setMostrarForm] = useState(false);
-  const [nuevoForm, setNuevoForm]     = useState({
-    nombre: "", email: "", password: "", rol: "tecnico",
-  });
-  const [creando, setCreando] = useState(false);
+  const [mostrarForm, setMostrarForm]   = useState(false);
+  const [nuevoForm, setNuevoForm]       = useState({ nombre: "", email: "", password: "", rol: "tecnico" });
+  const [creando, setCreando]           = useState(false);
 
   // Edición inline
-  const [editForm, setEditForm] = useState<{ nombre: string; rol: string }>({
-    nombre: "", rol: "",
-  });
+  const [editForm, setEditForm]         = useState<{ nombre: string; rol: string }>({ nombre: "", rol: "" });
+
+  // Reset password
+  const [resetId, setResetId]               = useState<string | null>(null);
+  const [passwordTemporal, setPasswordTemporal] = useState("");
+  const [resetting, setResetting]           = useState(false);
+  const [resetError, setResetError]         = useState("");
 
   const rolesDisponibles = rolActual === "superadmin"
     ? ["superadmin", "administrador", "tecnico", "administrativo"]
@@ -108,6 +110,28 @@ export default function UsuariosPanel({
     router.refresh();
   };
 
+  const handleResetPassword = async (id: string) => {
+    if (!passwordTemporal || passwordTemporal.length < 6) {
+      setResetError("Mínimo 6 caracteres");
+      return;
+    }
+    setResetting(true);
+    const res = await fetch(`/api/usuarios/${id}/reset-password`, {
+      method:  "POST",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ passwordTemporal }),
+    });
+    if (res.ok) {
+      setResetId(null);
+      setPasswordTemporal("");
+      setResetError("");
+    } else {
+      const data = await res.json();
+      setResetError(data.error ?? "Error al resetear la contraseña.");
+    }
+    setResetting(false);
+  };
+
   return (
     <div className="p-8">
       {/* Cabecera */}
@@ -166,7 +190,7 @@ export default function UsuariosPanel({
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                Contraseña <span className="text-red-400">*</span>
+                Contraseña temporal <span className="text-red-400">*</span>
               </label>
               <input
                 type="password"
@@ -234,7 +258,7 @@ export default function UsuariosPanel({
           </div>
         ) : (
           usuarios.map((u) => {
-            const rolInfo = ROL_CONFIG[u.rol] ?? { label: u.rol, className: "bg-gray-100 text-gray-500" };
+            const rolInfo   = ROL_CONFIG[u.rol] ?? { label: u.rol, className: "bg-gray-100 text-gray-500" };
             const isEditing = editando === u.id;
 
             return (
@@ -318,6 +342,17 @@ export default function UsuariosPanel({
                         <Pencil size={15} />
                       </button>
                       <button
+                        onClick={() => {
+                          setResetId(u.id);
+                          setPasswordTemporal("");
+                          setResetError("");
+                        }}
+                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
+                        title="Resetear contraseña"
+                      >
+                        <KeyRound size={15} />
+                      </button>
+                      <button
                         onClick={() => handleToggleActivo(u)}
                         className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors cursor-pointer ${
                           u.activo
@@ -336,6 +371,44 @@ export default function UsuariosPanel({
           })
         )}
       </div>
+
+      {/* Panel reset password */}
+      {resetId && (
+        <div className="mt-4 bg-purple-50 rounded-xl border border-purple-200 p-5">
+          <h3 className="text-sm font-semibold text-purple-700 mb-2">
+            Resetear contraseña — {usuarios.find((u) => u.id === resetId)?.nombre}
+          </h3>
+          <p className="text-xs text-purple-500 mb-4">
+            El usuario deberá cambiar esta contraseña al iniciar sesión.
+          </p>
+          <div className="flex gap-3">
+            <input
+              type="text"
+              placeholder="Contraseña temporal (mín. 6 caracteres)"
+              value={passwordTemporal}
+              onChange={(e) => setPasswordTemporal(e.target.value)}
+              className="flex-1 px-3 py-2.5 text-sm border border-purple-200 rounded-lg focus:outline-none focus:border-purple-400 bg-white"
+            />
+            <button
+              onClick={() => handleResetPassword(resetId)}
+              disabled={resetting}
+              className="flex items-center gap-2 bg-purple-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <Save size={15} />
+              {resetting ? "Guardando..." : "Resetear"}
+            </button>
+            <button
+              onClick={() => { setResetId(null); setPasswordTemporal(""); setResetError(""); }}
+              className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
+            >
+              Cancelar
+            </button>
+          </div>
+          {resetError && (
+            <p className="text-xs text-red-500 mt-2">{resetError}</p>
+          )}
+        </div>
+      )}
     </div>
   );
 }
