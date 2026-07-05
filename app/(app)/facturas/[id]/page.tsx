@@ -10,10 +10,11 @@ export default async function FacturaDetallePage({ params }: { params: Promise<{
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
 
-  const [factura, usuario, empresa] = await Promise.all([
+  const [factura, empresa] = await Promise.all([
     prisma.factura.findFirst({
-      where: { id, cliente: { usuarioId: session.user!.id } },
+      where: { id, cliente: { empresaId } },
       include: {
         cliente: true,
         ordenes: {
@@ -25,16 +26,16 @@ export default async function FacturaDetallePage({ params }: { params: Promise<{
         },
       },
     }),
-    prisma.usuario.findUnique({
-      where: { id: session.user!.id },
+    prisma.empresa.findUnique({
+      where: { id: empresaId },
       select: {
         nombreFiscal: true, cifNif: true,
         direccionFiscal: true, codigoPostal: true,
         ciudad: true, provincia: true,
-        telefono: true, emailFacturacion: true, iban: true,
+        telefono: true, emailFacturacion: true,
+        iban: true, logoBase64: true, textoRgpd: true,
       },
     }),
-    prisma.configuracionEmpresa.findFirst(),
   ]);
 
   if (!factura) redirect("/facturas");
@@ -42,7 +43,7 @@ export default async function FacturaDetallePage({ params }: { params: Promise<{
   return (
     <FacturaDetalle
       factura={JSON.parse(JSON.stringify(factura))}
-      usuario={JSON.parse(JSON.stringify(usuario))}
+      usuario={JSON.parse(JSON.stringify(empresa ?? {}))}
       empresa={JSON.parse(JSON.stringify(empresa ?? {}))}
     />
   );
