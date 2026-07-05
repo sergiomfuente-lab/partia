@@ -1,16 +1,8 @@
 import React from "react";
 import {
-  Document, Page, Text, View, StyleSheet, Image, Font,
+  Document, Page, Text, View, StyleSheet, Image,
 } from "@react-pdf/renderer";
 
-Font.register({
-  family: "Inter",
-  fonts: [
-    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuLyfAZ9hiJ-Ek-_EeA.woff", fontWeight: 400 },
-    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuGKYAZ9hiJ-Ek-_EeA.woff", fontWeight: 600 },
-    { src: "https://fonts.gstatic.com/s/inter/v13/UcCO3FwrK3iLTeHuS_fvQtMwCp50KnMw2boKoduKmMEVuFuYAZ9hiJ-Ek-_EeA.woff", fontWeight: 700 },
-  ],
-});
 
 const c = {
   negro:    "#0B1120",
@@ -22,7 +14,7 @@ const c = {
 };
 
 const s = StyleSheet.create({
-  page:          { fontFamily: "Inter", fontSize: 8, color: c.negro, padding: 40, backgroundColor: "#fff" },
+  page:          { fontSize: 8, color: c.negro, padding: 40, backgroundColor: "#fff" },
   row:           { flexDirection: "row" },
   col:           { flex: 1 },
 
