@@ -9,34 +9,31 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const { id } = await params;
+  const { id }      = await params;
+  const empresaId   = (session.user as any).empresaId;
 
-  const [orden, tiposServicio, usuario] = await Promise.all([
+  const [orden, tiposServicio, empresa] = await Promise.all([
     prisma.orden.findFirst({
-      where: { id, cliente: { usuarioId: session.user!.id } },
+      where: { id, cliente: { empresaId } },
       include: {
         cliente: {
           select: {
-            id: true,
-            nombre: true,
+            id: true, nombre: true,
             precioHoraEspecial: true,
             precioPorKmEspecial: true,
           },
         },
-        maquina: true,
-        servicios: {
-          include: { tipoServicio: true },
-          orderBy: { fecha: "asc" },
-        },
+        maquina:  true,
+        servicios:{ include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
         repuestos: true,
       },
     }),
     prisma.tipoServicio.findMany({
-      where: { activo: true },
+      where:   { activo: true },
       orderBy: { orden: "asc" },
     }),
-    prisma.usuario.findUnique({
-      where: { id: session.user!.id },
+    prisma.empresa.findUnique({
+      where:  { id: empresaId },
       select: { precioHora: true, precioPorKm: true },
     }),
   ]);
@@ -47,8 +44,8 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
     <EditarOrdenForm
       orden={JSON.parse(JSON.stringify(orden))}
       tiposServicio={tiposServicio}
-      precioHoraDefault={usuario?.precioHora ?? 55}
-      precioPorKmDefault={usuario?.precioPorKm ?? 0.35}
+      precioHoraDefault={empresa?.precioHora   ?? 55}
+      precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
     />
   );
 }
