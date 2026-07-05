@@ -8,16 +8,16 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  let empresa = await prisma.configuracionEmpresa.findFirst();
-  if (!empresa) {
-    empresa = await prisma.configuracionEmpresa.create({
-      data: {
-        textoRgpd: "De conformidad con lo dispuesto en el RGPD y LOPDGDD, le informamos que los datos personales serán tratados para cumplir con la obligación tributaria de emitir facturas. Podrá solicitar más información y ejercer sus derechos escribiendo a la dirección indicada.",
-      },
-    });
-  }
+  const empresaId = (session.user as any).empresaId;
 
-  return NextResponse.json(empresa);
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: empresaId },
+    select: {
+      id: true, nombre: true, logoBase64: true, textoRgpd: true,
+    },
+  });
+
+  return NextResponse.json(empresa ?? {});
 }
 
 export async function PUT(req: NextRequest) {
@@ -26,27 +26,17 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const empresaId = (session.user as any).empresaId;
+  const body      = await req.json();
   const { textoRgpd, logoBase64 } = body;
 
-  let empresa = await prisma.configuracionEmpresa.findFirst();
-
-  if (!empresa) {
-    empresa = await prisma.configuracionEmpresa.create({
-      data: {
-        ...(textoRgpd  !== undefined && { textoRgpd }),
-        ...(logoBase64 !== undefined && { logoBase64 }),
-      },
-    });
-  } else {
-    empresa = await prisma.configuracionEmpresa.update({
-      where: { id: empresa.id },
-      data: {
-        ...(textoRgpd  !== undefined && { textoRgpd }),
-        ...(logoBase64 !== undefined && { logoBase64 }),
-      },
-    });
-  }
+  const empresa = await prisma.empresa.update({
+    where: { id: empresaId },
+    data: {
+      ...(textoRgpd  !== undefined && { textoRgpd }),
+      ...(logoBase64 !== undefined && { logoBase64 }),
+    },
+  });
 
   return NextResponse.json(empresa);
 }
