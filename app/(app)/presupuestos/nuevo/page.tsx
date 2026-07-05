@@ -12,7 +12,7 @@ export default async function NuevoPresupuestoPage() {
   const empresaId = (session.user as any).empresaId;
   if (!empresaId) redirect("/dashboard");
 
-  const [clientes, empresa] = await Promise.all([
+  const [clientes, tiposServicio, empresa] = await Promise.all([
     prisma.cliente.findMany({
       where:   { empresaId, activo: true },
       select:  {
@@ -21,6 +21,10 @@ export default async function NuevoPresupuestoPage() {
         precioPorKmEspecial: true,
       },
       orderBy: { nombre: "asc" },
+    }),
+    prisma.tipoServicio.findMany({
+      where:   { activo: true },
+      orderBy: { orden: "asc" },
     }),
     prisma.empresa.findUnique({
       where:  { id: empresaId },
@@ -31,6 +35,7 @@ export default async function NuevoPresupuestoPage() {
   return (
     <NuevoPresupuestoForm
       clientes={clientes}
+      tiposServicio={tiposServicio}
       precioHoraDefault={empresa?.precioHora   ?? 55}
       precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
     />
