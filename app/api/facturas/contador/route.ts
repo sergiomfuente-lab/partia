@@ -8,9 +8,11 @@ export async function GET() {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const anio     = new Date().getFullYear();
+  const empresaId = (session.user as any).empresaId;
+  const anio      = new Date().getFullYear();
+
   const contador = await prisma.contadorFactura.findUnique({
-    where: { usuarioId_anio: { usuarioId: session.user.id, anio } },
+    where: { empresaId_anio: { empresaId, anio } },
   });
 
   return NextResponse.json({ anio, contador: contador?.contador ?? 0 });
@@ -22,7 +24,8 @@ export async function PUT(req: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const body = await req.json();
+  const empresaId     = (session.user as any).empresaId;
+  const body          = await req.json();
   const { anio, contador } = body;
 
   if (!anio || contador === undefined) {
@@ -30,9 +33,9 @@ export async function PUT(req: NextRequest) {
   }
 
   const updated = await prisma.contadorFactura.upsert({
-    where:  { usuarioId_anio: { usuarioId: session.user.id, anio } },
+    where:  { empresaId_anio: { empresaId, anio } },
     update: { contador },
-    create: { usuarioId: session.user.id, anio, contador },
+    create: { empresaId, anio, contador },
   });
 
   return NextResponse.json(updated);
