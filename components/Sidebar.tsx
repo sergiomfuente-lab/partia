@@ -5,15 +5,23 @@ import Link from "next/link";
 import {
   LayoutDashboard, Users, Wrench,
   ClipboardList, FileText, ShoppingCart,
-  Settings, UserCog,
+  Settings, UserCog, ShieldCheck,
 } from "lucide-react";
 
 interface Props {
-  userName?: string | null;
-  rol?:      string | null;
+  userName?:       string | null;
+  rol?:            string | null;
+  empresaActivaId?: string | null;
 }
 
-export default function Sidebar({ userName, rol }: Props) {
+const ROL_LABELS: Record<string, string> = {
+  superadmin:     "Superadministrador",
+  administrador:  "Administrador",
+  tecnico:        "Técnico",
+  administrativo: "Administrativo",
+};
+
+export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
   const pathname = usePathname();
 
   const isActive = (href: string) => {
@@ -22,22 +30,74 @@ export default function Sidebar({ userName, rol }: Props) {
   };
 
   const menu = [
-    { href: "/dashboard",     label: "Dashboard",     icon: <LayoutDashboard className="w-4 h-4" />, roles: ["superadmin", "administrador", "tecnico", "administrativo"] },
-    { href: "/clientes",      label: "Clientes",      icon: <Users className="w-4 h-4" />,           roles: ["superadmin", "administrador", "tecnico", "administrativo"] },
-    { href: "/maquinas",      label: "Máquinas",      icon: <Wrench className="w-4 h-4" />,          roles: ["superadmin", "administrador", "tecnico", "administrativo"] },
-    { href: "/ordenes",       label: "Órdenes",       icon: <ClipboardList className="w-4 h-4" />,   roles: ["superadmin", "administrador", "tecnico", "administrativo"] },
-    { href: "/facturas",      label: "Facturas",      icon: <FileText className="w-4 h-4" />,        roles: ["superadmin", "administrador", "administrativo"] },
-    { href: "/compras",       label: "Compras",       icon: <ShoppingCart className="w-4 h-4" />,    roles: ["superadmin", "administrador", "administrativo"] },
-    { href: "/usuarios",      label: "Usuarios",      icon: <UserCog className="w-4 h-4" />,         roles: ["superadmin", "administrador"] },
-    { href: "/configuracion", label: "Configuración", icon: <Settings className="w-4 h-4" />,        roles: ["superadmin", "administrador"] },
+    {
+      href:  "/superadmin",
+      label: "Superadmin",
+      icon:  <ShieldCheck className="w-4 h-4" />,
+      roles: ["superadmin"],
+    },
+    {
+      href:  "/dashboard",
+      label: "Dashboard",
+      icon:  <LayoutDashboard className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+    },
+    {
+      href:  "/clientes",
+      label: "Clientes",
+      icon:  <Users className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+    },
+    {
+      href:  "/maquinas",
+      label: "Máquinas",
+      icon:  <Wrench className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+    },
+    {
+      href:  "/ordenes",
+      label: "Órdenes",
+      icon:  <ClipboardList className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+    },
+    {
+      href:  "/facturas",
+      label: "Facturas",
+      icon:  <FileText className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "administrativo"],
+    },
+    {
+      href:  "/compras",
+      label: "Compras",
+      icon:  <ShoppingCart className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "administrativo"],
+    },
+    {
+      href:  "/usuarios",
+      label: "Usuarios",
+      icon:  <UserCog className="w-4 h-4" />,
+      roles: ["superadmin", "administrador"],
+    },
+    {
+      href:  "/configuracion",
+      label: "Configuración",
+      icon:  <Settings className="w-4 h-4" />,
+      roles: ["superadmin", "administrador"],
+    },
   ];
 
-  const menuFiltrado = menu.filter((item) =>
-    !rol || item.roles.includes(rol)
-  );
+  // Para superadmin sin empresa activa solo mostrar superadmin
+  const menuFiltrado = menu.filter((item) => {
+    if (!rol) return false;
+    if (!item.roles.includes(rol)) return false;
+    // Si es superadmin sin empresa activa solo ve superadmin
+    if (rol === "superadmin" && !empresaActivaId && item.href !== "/superadmin") return false;
+    return true;
+  });
 
   return (
     <aside className="w-60 bg-[#0B1120] flex flex-col h-full fixed top-0 left-0 z-40">
+      {/* Logo */}
       <div className="flex items-center gap-3 px-5 py-6 border-b border-[#1e2d42]">
         <svg width="28" height="28" viewBox="0 0 56 56">
           <polygon points="28,4 50,16 50,40 28,52 6,40 6,16" fill="none" stroke="#00C2FF" strokeWidth="2.5"/>
@@ -51,7 +111,8 @@ export default function Sidebar({ userName, rol }: Props) {
         </div>
       </div>
 
-      <nav className="flex-1 px-3 py-4 space-y-1">
+      {/* Nav */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         {menuFiltrado.map((item) => (
           <Link
             key={item.href}
@@ -70,6 +131,7 @@ export default function Sidebar({ userName, rol }: Props) {
         ))}
       </nav>
 
+      {/* Usuario */}
       <div className="px-4 py-4 border-t border-[#1e2d42]">
         <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#111827] cursor-pointer">
           <div className="w-8 h-8 rounded-full bg-[#00C2FF] flex items-center justify-center text-[#0B1120] text-sm font-bold flex-shrink-0">
@@ -86,10 +148,3 @@ export default function Sidebar({ userName, rol }: Props) {
     </aside>
   );
 }
-
-const ROL_LABELS: Record<string, string> = {
-  superadmin:     "Superadministrador",
-  administrador:  "Administrador",
-  tecnico:        "Técnico",
-  administrativo: "Administrativo",
-};
