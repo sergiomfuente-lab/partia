@@ -9,6 +9,9 @@ export default async function DashboardPage() {
 
   const empresaId = (session.user as any).empresaId;
 
+  // Si es superadmin sin empresa activa redirigir a superadmin
+  if (!empresaId) redirect("/superadmin");
+
   const [totalClientes, totalMaquinas, totalOrdenes, ultimasOrdenes] = await Promise.all([
     prisma.cliente.count({ where: { empresaId } }),
     prisma.maquina.count({ where: { cliente: { empresaId } } }),
