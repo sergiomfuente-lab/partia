@@ -25,7 +25,7 @@ const s = StyleSheet.create({
   empresa:       { fontSize: 11, fontWeight: 700, marginBottom: 2 },
   empresaSub:    { fontSize: 7, color: c.gris, marginBottom: 1 },
   numLabel:      { fontSize: 7, color: c.azul, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 1 },
-  numValue:      { fontSize: 13, fontWeight: 700, fontFamily: "Inter", marginBottom: 4 },
+  numValue:      { fontSize: 13, fontWeight: 700, marginBottom: 4 },
   fechaLabel:    { fontSize: 7, color: c.gris, textTransform: "uppercase", letterSpacing: 0.5, marginBottom: 1 },
   fechaValue:    { fontSize: 8, fontWeight: 600, marginBottom: 4 },
 
@@ -79,7 +79,7 @@ const s = StyleSheet.create({
   // Pie
   pieBox:        { marginTop: 16, paddingTop: 10, borderTopWidth: 1, borderTopColor: c.borde },
   piePago:       { fontSize: 8, fontWeight: 600, marginBottom: 2 },
-  pieIban:       { fontSize: 7, color: c.gris, fontFamily: "Inter", marginBottom: 8 },
+  pieIban:       { fontSize: 7, color: c.gris, marginBottom: 8 },
   pieRgpd:       { fontSize: 6, color: c.grisClaro, lineHeight: 1.5 },
 });
 
