@@ -25,7 +25,8 @@ model Empresa {
   precioPorKm      Float     @default(0.35)
   activa           Boolean   @default(true)
   createdAt        DateTime  @default(now())
-  usuarios         Usuario[]
+  usuarios         Usuario[] @relation("UsuarioEmpresa")
+  usuariosActivos  Usuario[] @relation("UsuarioEmpresaActiva")
   clientes         Cliente[]
   contadores       ContadorFactura[]
 }
@@ -39,7 +40,9 @@ model Usuario {
   activo                Boolean   @default(true)
   debeCambiarPassword   Boolean   @default(false)
   empresaId             String?
-  empresa               Empresa?  @relation(fields: [empresaId], references: [id])
+  empresaActivaId       String?
+  empresa               Empresa?  @relation("UsuarioEmpresa", fields: [empresaId], references: [id])
+  empresaActiva         Empresa?  @relation("UsuarioEmpresaActiva", fields: [empresaActivaId], references: [id])
   createdAt             DateTime  @default(now())
   clientes              Cliente[]
 }

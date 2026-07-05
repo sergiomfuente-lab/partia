@@ -12,7 +12,6 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
 
         const usuario = await prisma.usuario.findUnique({
           where: { email },
-          include: { empresa: { select: { id: true, nombre: true } } },
         });
 
         if (!usuario || !usuario.activo) return null;
@@ -20,12 +19,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         const ok = await bcrypt.compare(password, usuario.password);
         if (!ok) return null;
 
+        // Para superadmin usar empresaActivaId si existe
+        const empresaId = usuario.rol === "superadmin"
+          ? usuario.empresaActivaId
+          : usuario.empresaId;
+
         return {
           id:        usuario.id,
           name:      usuario.nombre,
           email:     usuario.email,
           rol:       usuario.rol,
-          empresaId: usuario.empresaId,
+          empresaId: empresaId,
         };
       },
     }),
