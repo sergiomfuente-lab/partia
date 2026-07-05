@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
-import { renderToBuffer } from "@react-pdf/renderer";
-import FacturaPDF from "@/components/FacturaPDF";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -41,6 +39,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!factura) {
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
   }
+
+  const { default: FacturaPDF } = await import("@/components/FacturaPDF");
+  const { renderToBuffer } = await import("@react-pdf/renderer");
 
   const buffer = await renderToBuffer(
     FacturaPDF({
