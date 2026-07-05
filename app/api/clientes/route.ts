@@ -1,59 +1,78 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
 
-export async function POST(req: Request) {
-  try {
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-    const { nombre, razonSocial, cif, email, telefono, tipo, direccionFacturacion, formaPago, observaciones, precioHoraEspecial } = await req.json();
-
-    if (!nombre || !cif || !tipo) {
-      return NextResponse.json({ error: "Nombre, CIF y tipo son obligatorios" }, { status: 400 });
-    }
-
-    const existe = await prisma.cliente.findUnique({ where: { cif } });
-    if (existe) {
-      return NextResponse.json({ error: "Ya existe un cliente con ese CIF" }, { status: 400 });
-    }
-
-    const cliente = await prisma.cliente.create({
-      data: {
-        nombre,
-        razonSocial: razonSocial || null,
-        cif,
-        email: email || null,
-        telefono: telefono || null,
-        tipo,
-        direccionFacturacion: direccionFacturacion || null,
-        formaPago: formaPago || "Transferencia bancaria",
-        observaciones: observaciones || null,
-        precioHoraEspecial: precioHoraEspecial ? parseFloat(precioHoraEspecial) : null,
-        usuarioId: (session.user as any).id as string,
-      },
-    });
-
-    return NextResponse.json(cliente, { status: 201 });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+export async function GET(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  const empresaId = (session.user as any).empresaId;
+  if (!empresaId) {
+    return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
+  }
+
+  const { searchParams } = new URL(req.url);
+  const q    = searchParams.get("q");
+  const tipo = searchParams.get("tipo");
+
+  const clientes = await prisma.cliente.findMany({
+    where: {
+      empresaId,
+      ...(tipo && tipo !== "todos" && { tipo }),
+      ...(q && {
+        OR: [
+          { nombre:      { contains: q, mode: "insensitive" } },
+          { cif:         { contains: q, mode: "insensitive" } },
+          { email:       { contains: q, mode: "insensitive" } },
+          { razonSocial: { contains: q, mode: "insensitive" } },
+        ],
+      }),
+    },
+    include: {
+      _count: { select: { maquinas: true, ordenes: true } },
+    },
+    orderBy: { nombre: "asc" },
+  });
+
+  return NextResponse.json(clientes);
 }
 
-export async function GET() {
-  try {
-    const session = await auth();
-    if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-
-    const clientes = await prisma.cliente.findMany({
-      where: { usuarioId: (session.user as any).id as string },
-      orderBy: { createdAt: "desc" },
-    });
-
-    return NextResponse.json(clientes);
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Error interno" }, { status: 500 });
+export async function POST(req: NextRequest) {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
+
+  const empresaId = (session.user as any).empresaId;
+  if (!empresaId) {
+    return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
+  }
+
+  const body = await req.json();
+  const {
+    nombre, razonSocial, cif, direccionFacturacion,
+    formaPago, email, telefono, tipo,
+    observaciones, precioHoraEspecial, precioPorKmEspecial,
+  } = body;
+
+  if (!nombre || !cif) {
+    return NextResponse.json({ error: "Nombre y CIF son obligatorios" }, { status: 400 });
+  }
+
+  const cliente = await prisma.cliente.create({
+    data: {
+      nombre, razonSocial, cif, direccionFacturacion,
+      formaPago, email, telefono,
+      tipo:               tipo ?? "empresa",
+      observaciones,
+      precioHoraEspecial: precioHoraEspecial  ? parseFloat(precioHoraEspecial)  : null,
+      precioPorKmEspecial: precioPorKmEspecial ? parseFloat(precioPorKmEspecial) : null,
+      empresaId,
+      usuarioId: session.user.id,
+    },
+  });
+
+  return NextResponse.json(cliente, { status: 201 });
 }

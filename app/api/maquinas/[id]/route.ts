@@ -4,14 +4,13 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
 
   const maquina = await prisma.maquina.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
+    where: { id, cliente: { empresaId } },
     include: {
       cliente: { select: { id: true, nombre: true } },
       ordenes: {
@@ -21,44 +20,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     },
   });
 
-  if (!maquina) {
-    return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
-  }
-
+  if (!maquina) return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
   return NextResponse.json(maquina);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { id } = await params;
-  const body = await req.json();
-  const { marca, modelo, numeroDeSerie, horasIniciales, horasActuales, observaciones, estado } = body;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
+  const body      = await req.json();
 
-  const maquina = await prisma.maquina.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
-  });
-  if (!maquina) {
-    return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
-  }
+  const maquina = await prisma.maquina.findFirst({ where: { id, cliente: { empresaId } } });
+  if (!maquina) return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
 
   const updated = await prisma.maquina.update({
     where: { id },
     data: {
-      ...(marca !== undefined && { marca }),
-      ...(modelo !== undefined && { modelo }),
-      ...(numeroDeSerie !== undefined && { numeroDeSerie }),
-      ...(horasIniciales !== undefined && { horasIniciales }),
-      ...(horasActuales !== undefined && { horasActuales }),
-      ...(observaciones !== undefined && { observaciones }),
-      ...(estado !== undefined && { estado }),
+      ...(body.marca          !== undefined && { marca: body.marca }),
+      ...(body.modelo         !== undefined && { modelo: body.modelo }),
+      ...(body.numeroDeSerie  !== undefined && { numeroDeSerie: body.numeroDeSerie }),
+      ...(body.horasIniciales !== undefined && { horasIniciales: body.horasIniciales }),
+      ...(body.horasActuales  !== undefined && { horasActuales: body.horasActuales }),
+      ...(body.observaciones  !== undefined && { observaciones: body.observaciones }),
+      ...(body.estado         !== undefined && { estado: body.estado }),
     },
-    include: {
-      cliente: { select: { id: true, nombre: true } },
-    },
+    include: { cliente: { select: { id: true, nombre: true } } },
   });
 
   return NextResponse.json(updated);
@@ -66,18 +54,13 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
 
-  const maquina = await prisma.maquina.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
-  });
-  if (!maquina) {
-    return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
-  }
+  const maquina = await prisma.maquina.findFirst({ where: { id, cliente: { empresaId } } });
+  if (!maquina) return NextResponse.json({ error: "Máquina no encontrada" }, { status: 404 });
 
   await prisma.maquina.delete({ where: { id } });
   return NextResponse.json({ ok: true });

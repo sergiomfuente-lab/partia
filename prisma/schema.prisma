@@ -7,21 +7,9 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model ConfiguracionEmpresa {
-  id        String   @id @default(cuid())
-  textoRgpd String?
-  logoBase64 String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-}
-
-model Usuario {
+model Empresa {
   id               String    @id @default(cuid())
   nombre           String
-  email            String    @unique
-  password         String
-  precioHora       Float     @default(55)
-  precioPorKm      Float     @default(0.35)
   nombreFiscal     String?
   cifNif           String?
   direccionFiscal  String?
@@ -31,27 +19,46 @@ model Usuario {
   telefono         String?
   emailFacturacion String?
   iban             String?
+  logoBase64       String?
+  textoRgpd        String?
+  precioHora       Float     @default(55)
+  precioPorKm      Float     @default(0.35)
+  activa           Boolean   @default(true)
   createdAt        DateTime  @default(now())
+  usuarios         Usuario[]
   clientes         Cliente[]
   contadores       ContadorFactura[]
+}
+
+model Usuario {
+  id               String    @id @default(cuid())
+  nombre           String
+  email            String    @unique
+  password         String
+  rol              String    @default("tecnico")
+  activo           Boolean   @default(true)
+  empresaId        String?
+  empresa          Empresa?  @relation(fields: [empresaId], references: [id])
+  createdAt        DateTime  @default(now())
+  clientes         Cliente[]
 }
 
 model ContadorFactura {
   id        String   @id @default(cuid())
   anio      Int
   contador  Int      @default(0)
-  usuarioId String
-  usuario   Usuario  @relation(fields: [usuarioId], references: [id])
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
   createdAt DateTime @default(now())
 
-  @@unique([usuarioId, anio])
+  @@unique([empresaId, anio])
 }
 
 model Cliente {
   id                   String    @id @default(cuid())
   nombre               String
   razonSocial          String?
-  cif                  String    @unique
+  cif                  String
   direccionFacturacion String?
   formaPago            String?   @default("Transferencia bancaria")
   email                String?
@@ -61,8 +68,10 @@ model Cliente {
   precioHoraEspecial   Float?
   precioPorKmEspecial  Float?
   activo               Boolean   @default(true)
-  usuarioId            String
-  usuario              Usuario   @relation(fields: [usuarioId], references: [id])
+  empresaId            String
+  empresa              Empresa   @relation(fields: [empresaId], references: [id])
+  usuarioId            String?
+  usuario              Usuario?  @relation(fields: [usuarioId], references: [id])
   maquinas             Maquina[]
   facturas             Factura[]
   ordenes              Orden[]

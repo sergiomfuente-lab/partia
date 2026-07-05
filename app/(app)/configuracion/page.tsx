@@ -9,24 +9,28 @@ export default async function ConfiguracionPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const empresaId = (session.user as any).empresaId;
+
   const [usuario, tiposServicio, empresa, contador] = await Promise.all([
     prisma.usuario.findUnique({
-      where: { id: session.user!.id },
-      select: {
-        id: true, nombre: true, email: true,
-        precioHora: true, precioPorKm: true,
-        nombreFiscal: true, cifNif: true,
-        direccionFiscal: true, codigoPostal: true,
-        ciudad: true, provincia: true,
-        telefono: true, emailFacturacion: true, iban: true,
-      },
+      where: { id: session.user.id },
+      select: { id: true, nombre: true, email: true },
     }),
     prisma.tipoServicio.findMany({ orderBy: { orden: "asc" } }),
-    prisma.configuracionEmpresa.findFirst(),
+    prisma.empresa.findUnique({
+      where: { id: empresaId },
+      select: {
+        id: true, nombre: true, nombreFiscal: true, cifNif: true,
+        direccionFiscal: true, codigoPostal: true, ciudad: true,
+        provincia: true, telefono: true, emailFacturacion: true,
+        iban: true, precioHora: true, precioPorKm: true,
+        logoBase64: true, textoRgpd: true,
+      },
+    }),
     prisma.contadorFactura.findUnique({
       where: {
-        usuarioId_anio: {
-          usuarioId: session.user!.id,
+        empresaId_anio: {
+          empresaId,
           anio: new Date().getFullYear(),
         },
       },

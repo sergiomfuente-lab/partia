@@ -87,9 +87,18 @@ export default function ConfiguracionPanel({
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        ...perfil, ...fiscal,
-        precioHora:  parseFloat(perfil.precioHora)  || 55,
-        precioPorKm: parseFloat(perfil.precioPorKm) || 0.35,
+        nombre: perfil.nombre,
+        nombreFiscal:     fiscal.nombreFiscal,
+        cifNif:           fiscal.cifNif,
+        direccionFiscal:  fiscal.direccionFiscal,
+        codigoPostal:     fiscal.codigoPostal,
+        ciudad:           fiscal.ciudad,
+        provincia:        fiscal.provincia,
+        telefono:         fiscal.telefono,
+        emailFacturacion: fiscal.emailFacturacion,
+        iban:             fiscal.iban,
+        precioHora:       parseFloat(perfil.precioHora)  || 55,
+        precioPorKm:      parseFloat(perfil.precioPorKm) || 0.35,
       }),
     });
     if (!res.ok) { setError("Error al guardar."); setLoading(false); return; }

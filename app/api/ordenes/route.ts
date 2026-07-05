@@ -4,10 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  const empresaId = (session.user as any).empresaId;
   const { searchParams } = new URL(req.url);
   const clienteId = searchParams.get("clienteId");
   const maquinaId = searchParams.get("maquinaId");
@@ -16,15 +15,15 @@ export async function GET(req: NextRequest) {
 
   const ordenes = await prisma.orden.findMany({
     where: {
-      cliente: { usuarioId: session.user.id },
+      cliente: { empresaId },
       ...(clienteId && { clienteId }),
       ...(maquinaId && { maquinaId }),
       ...(estado    && { estado }),
       ...(q && {
         OR: [
-          { numero:             { contains: q, mode: "insensitive" } },
-          { trabajosRealizados: { contains: q, mode: "insensitive" } },
-          { direccionReparacion:{ contains: q, mode: "insensitive" } },
+          { numero:              { contains: q, mode: "insensitive" } },
+          { trabajosRealizados:  { contains: q, mode: "insensitive" } },
+          { direccionReparacion: { contains: q, mode: "insensitive" } },
         ],
       }),
     },
@@ -42,38 +41,28 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const body = await req.json();
+  const empresaId = (session.user as any).empresaId;
+  const body      = await req.json();
   const {
-    clienteId,
-    maquinaId,
-    fecha,
-    direccionReparacion,
-    trabajosRealizados,
-    observaciones,
-    servicios,
-    repuestos,
+    clienteId, maquinaId, fecha,
+    direccionReparacion, trabajosRealizados, observaciones,
+    servicios, repuestos,
   } = body;
 
   if (!clienteId || !maquinaId) {
     return NextResponse.json({ error: "Cliente y máquina son obligatorios" }, { status: 400 });
   }
 
-  // Verificar que el cliente pertenece al usuario
-  const cliente = await prisma.cliente.findFirst({
-    where: { id: clienteId, usuarioId: session.user.id },
-  });
-  if (!cliente) {
-    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-  }
+  const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
+  if (!cliente) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
 
-  // Generar número de orden automático
+  // Generar número de orden
   const ultima = await prisma.orden.findFirst({
+    where:   { cliente: { empresaId } },
     orderBy: { createdAt: "desc" },
-    select: { numero: true },
+    select:  { numero: true },
   });
 
   let nextNum = 1;
@@ -83,12 +72,9 @@ export async function POST(req: NextRequest) {
   }
   const numero = `ORD-${String(nextNum).padStart(5, "0")}`;
 
-  // Crear orden con servicios y repuestos
   const orden = await prisma.orden.create({
     data: {
-      numero,
-      clienteId,
-      maquinaId,
+      numero, clienteId, maquinaId,
       fecha:               fecha ? new Date(fecha) : new Date(),
       direccionReparacion: direccionReparacion ?? null,
       trabajosRealizados:  trabajosRealizados  ?? null,
@@ -113,25 +99,22 @@ export async function POST(req: NextRequest) {
       },
     },
     include: {
-      cliente:  { select: { id: true, nombre: true } },
-      maquina:  { select: { id: true, marca: true, modelo: true } },
-      servicios:{ include: { tipoServicio: true } },
+      cliente:   { select: { id: true, nombre: true } },
+      maquina:   { select: { id: true, marca: true, modelo: true } },
+      servicios: { include: { tipoServicio: true } },
       repuestos: true,
     },
   });
 
-  // Actualizar horas actuales de la máquina sumando horas de mano de obra
+  // Actualizar horas máquina
   const horasManoObra = (servicios ?? [])
-    .filter((s: any) => {
-      // buscar si el tipo es mano de obra por id
-      return s.esManoObra;
-    })
+    .filter((s: any) => s.esManoObra)
     .reduce((acc: number, s: any) => acc + (s.cantidad ?? 0), 0);
 
   if (horasManoObra > 0) {
     await prisma.maquina.update({
       where: { id: maquinaId },
-      data: { horasActuales: { increment: horasManoObra } },
+      data:  { horasActuales: { increment: horasManoObra } },
     });
   }
 

@@ -7,43 +7,49 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   trustHost: true,
   providers: [
     Credentials({
-      credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Contraseña", type: "password" },
-      },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) return null;
+        const { email, password } = credentials as { email: string; password: string };
 
         const usuario = await prisma.usuario.findUnique({
-          where: { email: credentials.email as string },
+          where: { email },
+          include: { empresa: { select: { id: true, nombre: true } } },
         });
 
-        if (!usuario) return null;
+        if (!usuario || !usuario.activo) return null;
 
-        const passwordCorrecta = await bcrypt.compare(
-          credentials.password as string,
-          usuario.password as string
-        );
-
-        if (!passwordCorrecta) return null;
+        const ok = await bcrypt.compare(password, usuario.password);
+        if (!ok) return null;
 
         return {
-          id: usuario.id,
-          email: usuario.email,
-          name: usuario.nombre,
+          id:        usuario.id,
+          name:      usuario.nombre,
+          email:     usuario.email,
+          rol:       usuario.rol,
+          empresaId: usuario.empresaId,
         };
       },
     }),
   ],
+  session: { strategy: "jwt" },
   callbacks: {
-    async jwt({ token, user }) {
-      if (user) token.id = user.id;
+    jwt({ token, user }) {
+      if (user) {
+        token.id        = user.id;
+        token.rol       = (user as any).rol;
+        token.empresaId = (user as any).empresaId;
+      }
       return token;
     },
-    async session({ session, token }) {
-      if (token) (session.user as any).id = token.id;
+    session({ session, token }) {
+      if (session.user) {
+        session.user.id        = token.id as string;
+        (session.user as any).rol       = token.rol;
+        (session.user as any).empresaId = token.empresaId;
+      }
       return session;
     },
   },
-  pages: { signIn: "/login" },
+  pages: {
+    signIn: "/login",
+  },
 });

@@ -4,10 +4,9 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
+  const empresaId = (session.user as any).empresaId;
   const { searchParams } = new URL(req.url);
   const clienteId = searchParams.get("clienteId");
   const estado    = searchParams.get("estado");
@@ -15,24 +14,14 @@ export async function GET(req: NextRequest) {
 
   const facturas = await prisma.factura.findMany({
     where: {
-      cliente: { usuarioId: session.user.id },
+      cliente: { empresaId },
       ...(clienteId && { clienteId }),
       ...(estado    && { estado }),
-      ...(q && {
-        OR: [
-          { numero: { contains: q, mode: "insensitive" } },
-        ],
-      }),
+      ...(q && { OR: [{ numero: { contains: q, mode: "insensitive" } }] }),
     },
     include: {
       cliente: { select: { id: true, nombre: true } },
-      ordenes: {
-        select: {
-          id:     true,
-          numero: true,
-          fecha:  true,
-        },
-      },
+      ordenes: { select: { id: true, numero: true, fecha: true } },
     },
     orderBy: { fecha: "desc" },
   });
@@ -42,58 +31,30 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
-  const body = await req.json();
-  const {
-    clienteId,
-    ordenIds,
-    fecha,
-    vencimiento,
-    tipoDescuento,
-    descuentoValor,
-    notas,
-  } = body;
+  const empresaId = (session.user as any).empresaId;
+  const body      = await req.json();
+  const { clienteId, ordenIds, fecha, vencimiento, tipoDescuento, descuentoValor, notas } = body;
 
   if (!clienteId || !ordenIds?.length) {
-    return NextResponse.json(
-      { error: "Cliente y al menos una orden son obligatorios" },
-      { status: 400 }
-    );
+    return NextResponse.json({ error: "Cliente y al menos una orden son obligatorios" }, { status: 400 });
   }
 
-  // Verificar cliente
-  const cliente = await prisma.cliente.findFirst({
-    where: { id: clienteId, usuarioId: session.user.id },
-  });
-  if (!cliente) {
-    return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
-  }
+  const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
+  if (!cliente) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
 
-  // Cargar órdenes con servicios y repuestos
   const ordenes = await prisma.orden.findMany({
     where: { id: { in: ordenIds }, clienteId },
-    include: {
-      servicios:  { include: { tipoServicio: true } },
-      repuestos:  true,
-      maquina:    true,
-    },
+    include: { servicios: true, repuestos: true },
   });
 
-  // Calcular base imponible
   const baseImponible = ordenes.reduce((acc, orden) => {
-    const totalServicios = orden.servicios.reduce(
-      (a, s) => a + s.cantidad * s.precio, 0
-    );
-    const totalRepuestos = orden.repuestos.reduce(
-      (a, r) => a + r.cantidad * r.precioVenta, 0
-    );
-    return acc + totalServicios + totalRepuestos;
+    const s = orden.servicios.reduce((a, s) => a + s.cantidad * s.precio, 0);
+    const r = orden.repuestos.reduce((a, r) => a + r.cantidad * r.precioVenta, 0);
+    return acc + s + r;
   }, 0);
 
-  // Calcular descuento
   let descuento = 0;
   if (tipoDescuento === "porcentaje") {
     descuento = baseImponible * (descuentoValor / 100);
@@ -105,53 +66,44 @@ export async function POST(req: NextRequest) {
   const iva   = baseConDescuento * 0.21;
   const total = baseConDescuento + iva;
 
-  // Generar número de factura — formato: CONTADOR_DD-MM-YYYY
+  // Contador por empresa y año
   const fechaFactura = fecha ? new Date(fecha) : new Date();
   const anio         = fechaFactura.getFullYear();
 
-  // Buscar o crear contador del año
   const contador = await prisma.contadorFactura.upsert({
-    where:  { usuarioId_anio: { usuarioId: session.user.id, anio } },
+    where:  { empresaId_anio: { empresaId, anio } },
     update: { contador: { increment: 1 } },
-    create: { usuarioId: session.user.id, anio, contador: 1 },
+    create: { empresaId, anio, contador: 1 },
   });
 
-  const numeroContador = contador.contador;
   const dia    = String(fechaFactura.getDate()).padStart(2, "0");
   const mes    = String(fechaFactura.getMonth() + 1).padStart(2, "0");
-  const numero = `${numeroContador}_${dia}-${mes}-${anio}`;
+  const numero = `${contador.contador}_${dia}-${mes}-${anio}`;
 
-  // Crear factura
   const factura = await prisma.factura.create({
     data: {
-      numero,
-      clienteId,
+      numero, clienteId,
       fecha:          fechaFactura,
       vencimiento:    vencimiento ? new Date(vencimiento) : null,
-      baseImponible,
-      descuento,
+      baseImponible, descuento,
       tipoDescuento:  tipoDescuento  ?? "euro",
       descuentoValor: descuentoValor ?? 0,
-      iva,
-      total,
+      iva, total,
       notas:          notas ?? null,
-      ordenes: {
-        connect: ordenIds.map((id: string) => ({ id })),
-      },
+      ordenes: { connect: ordenIds.map((id: string) => ({ id })) },
     },
     include: {
       cliente: true,
       ordenes: {
         include: {
-          servicios:  { include: { tipoServicio: true } },
-          repuestos:  true,
-          maquina:    true,
+          servicios: { include: { tipoServicio: true } },
+          repuestos: true,
+          maquina:   true,
         },
       },
     },
   });
 
-  // Marcar órdenes como completadas si no lo están
   await prisma.orden.updateMany({
     where: { id: { in: ordenIds }, estado: { not: "completado" } },
     data:  { estado: "completado" },

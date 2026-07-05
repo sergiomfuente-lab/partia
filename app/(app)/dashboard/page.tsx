@@ -5,28 +5,21 @@ import Link from "next/link";
 
 export default async function DashboardPage() {
   const session = await auth();
-  if (!session) redirect("/login");
+  if (!session?.user?.id) redirect("/login");
 
-  const usuarioId = (session.user as any).id as string;
+  const empresaId = (session.user as any).empresaId;
 
-  const totalClientes = await prisma.cliente.count({
-    where: { usuarioId },
-  });
-
-  const totalMaquinas = await prisma.maquina.count({
-    where: { cliente: { usuarioId } },
-  });
-
-  const totalOrdenes = await prisma.orden.count({
-    where: { cliente: { usuarioId } },
-  });
-
-  const ultimasOrdenes = await prisma.orden.findMany({
-    where: { cliente: { usuarioId } },
-    include: { maquina: true, cliente: true },
-    orderBy: { createdAt: "desc" },
-    take: 5,
-  });
+  const [totalClientes, totalMaquinas, totalOrdenes, ultimasOrdenes] = await Promise.all([
+    prisma.cliente.count({ where: { empresaId } }),
+    prisma.maquina.count({ where: { cliente: { empresaId } } }),
+    prisma.orden.count({ where: { cliente: { empresaId } } }),
+    prisma.orden.findMany({
+      where:   { cliente: { empresaId } },
+      include: { maquina: true, cliente: true },
+      orderBy: { createdAt: "desc" },
+      take: 5,
+    }),
+  ]);
 
   return (
     <div className="p-8">
@@ -61,9 +54,7 @@ export default async function DashboardPage() {
         {ultimasOrdenes.length === 0 ? (
           <div className="text-center py-12">
             <p className="text-gray-400 text-sm mb-3">No hay órdenes registradas todavía</p>
-            <Link href="/ordenes/nueva" className="text-[#00C2FF] text-sm">
-              Crear primera orden →
-            </Link>
+            <Link href="/ordenes/nueva" className="text-[#00C2FF] text-sm">Crear primera orden →</Link>
           </div>
         ) : (
           <table className="w-full">
@@ -82,9 +73,7 @@ export default async function DashboardPage() {
                   <td className="py-3 text-sm font-medium text-[#185FA5]">{orden.numero}</td>
                   <td className="py-3 text-sm text-gray-800">{orden.cliente.nombre}</td>
                   <td className="py-3 text-sm text-gray-600">{orden.maquina.marca} {orden.maquina.modelo}</td>
-                  <td className="py-3 text-sm text-gray-400">
-                    {new Date(orden.fecha).toLocaleDateString("es-ES")}
-                  </td>
+                  <td className="py-3 text-sm text-gray-400">{new Date(orden.fecha).toLocaleDateString("es-ES")}</td>
                   <td className="py-3">
                     <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${
                       orden.estado === "completado" ? "bg-green-50 text-green-700" :
