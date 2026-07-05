@@ -94,8 +94,8 @@ const s = StyleSheet.create({
 const fmt = (d: string) =>
   new Date(d).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" });
 
-export function FacturaPDF({ factura, usuario, empresa }: { factura: any; usuario: any; empresa: any }) {
-  return (
+export default function FacturaPDF({ factura, usuario, empresa }: { factura: any; usuario: any; empresa: any }) {
+    return (
     <Document>
       <Page size="A4" style={s.page}>
 
