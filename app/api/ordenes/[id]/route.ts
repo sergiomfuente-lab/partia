@@ -8,16 +8,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
+    where: { id, cliente: { empresaId } },
     include: {
-      cliente:  true,
-      maquina:  true,
-      servicios:{ include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
-      repuestos: true,
-      factura:  { select: { id: true, numero: true, estado: true } },
+      cliente:         true,
+      maquina:         true,
+      servicios:       { include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
+      serviciosLibres: true,
+      repuestos:       true,
+      factura:         { select: { id: true, numero: true, estado: true } },
     },
   });
 
@@ -34,26 +36,21 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id } = await params;
-  const body   = await req.json();
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
+  const body      = await req.json();
   const {
-    fecha,
-    direccionReparacion,
-    trabajosRealizados,
-    observaciones,
-    estado,
-    servicios,
-    repuestos,
+    fecha, direccionReparacion, trabajosRealizados,
+    observaciones, estado, servicios, serviciosLibres, repuestos,
   } = body;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
+    where: { id, cliente: { empresaId } },
   });
   if (!orden) {
     return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
   }
 
-  // Actualizar orden — si vienen servicios/repuestos los reemplazamos completos
   const updated = await prisma.orden.update({
     where: { id },
     data: {
@@ -74,6 +71,16 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
           })),
         },
       }),
+      ...(serviciosLibres !== undefined && {
+        serviciosLibres: {
+          deleteMany: {},
+          create: serviciosLibres.map((s: any) => ({
+            descripcion: s.descripcion,
+            cantidad:    s.cantidad,
+            precio:      s.precio,
+          })),
+        },
+      }),
       ...(repuestos !== undefined && {
         repuestos: {
           deleteMany: {},
@@ -88,10 +95,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }),
     },
     include: {
-      cliente:  { select: { id: true, nombre: true } },
-      maquina:  { select: { id: true, marca: true, modelo: true } },
-      servicios:{ include: { tipoServicio: true } },
-      repuestos: true,
+      cliente:         { select: { id: true, nombre: true } },
+      maquina:         { select: { id: true, marca: true, modelo: true } },
+      servicios:       { include: { tipoServicio: true } },
+      serviciosLibres: true,
+      repuestos:       true,
     },
   });
 
@@ -104,17 +112,18 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { usuarioId: session.user.id } },
+    where: { id, cliente: { empresaId } },
   });
   if (!orden) {
     return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
   }
 
-  // Borrar servicios y repuestos primero
   await prisma.servicio.deleteMany({ where: { ordenId: id } });
+  await prisma.servicioLibre.deleteMany({ where: { ordenId: id } });
   await prisma.repuesto.deleteMany({ where: { ordenId: id } });
   await prisma.orden.delete({ where: { id } });
 

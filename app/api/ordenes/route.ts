@@ -28,10 +28,11 @@ export async function GET(req: NextRequest) {
       }),
     },
     include: {
-      cliente:  { select: { id: true, nombre: true } },
-      maquina:  { select: { id: true, marca: true, modelo: true } },
-      servicios:{ include: { tipoServicio: true } },
-      _count:   { select: { repuestos: true, servicios: true } },
+      cliente:         { select: { id: true, nombre: true } },
+      maquina:         { select: { id: true, marca: true, modelo: true } },
+      servicios:       { include: { tipoServicio: true } },
+      serviciosLibres: true,
+      _count:          { select: { repuestos: true, servicios: true } },
     },
     orderBy: { fecha: "desc" },
   });
@@ -48,7 +49,7 @@ export async function POST(req: NextRequest) {
   const {
     clienteId, maquinaId, fecha,
     direccionReparacion, trabajosRealizados, observaciones,
-    servicios, repuestos,
+    servicios, serviciosLibres, repuestos,
   } = body;
 
   if (!clienteId || !maquinaId) {
@@ -88,6 +89,13 @@ export async function POST(req: NextRequest) {
           descripcion:    s.descripcion ?? null,
         })),
       },
+      serviciosLibres: {
+        create: (serviciosLibres ?? []).map((s: any) => ({
+          descripcion: s.descripcion,
+          cantidad:    s.cantidad,
+          precio:      s.precio,
+        })),
+      },
       repuestos: {
         create: (repuestos ?? []).map((r: any) => ({
           referencia:  r.referencia  ?? null,
@@ -99,10 +107,11 @@ export async function POST(req: NextRequest) {
       },
     },
     include: {
-      cliente:   { select: { id: true, nombre: true } },
-      maquina:   { select: { id: true, marca: true, modelo: true } },
-      servicios: { include: { tipoServicio: true } },
-      repuestos: true,
+      cliente:         { select: { id: true, nombre: true } },
+      maquina:         { select: { id: true, marca: true, modelo: true } },
+      servicios:       { include: { tipoServicio: true } },
+      serviciosLibres: true,
+      repuestos:       true,
     },
   });
 
