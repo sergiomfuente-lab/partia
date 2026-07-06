@@ -35,6 +35,13 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
     router.refresh();
   };
 
+  const totalServicios = presupuesto.serviciosLibres.reduce(
+    (a: number, s: any) => a + s.cantidad * s.precio, 0
+  );
+  const totalRepuestos = presupuesto.repuestos.reduce(
+    (a: number, r: any) => a + r.cantidad * r.precioVenta, 0
+  );
+
   return (
     <div className="p-8">
       {/* Cabecera */}
@@ -104,7 +111,6 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
       <div className="grid grid-cols-3 gap-6">
         {/* Columna izquierda */}
         <div className="space-y-4">
-          {/* Info */}
           <div className="bg-white rounded-xl border border-gray-100 p-5">
             <h3 className="text-sm font-semibold text-gray-700 mb-4 pb-3 border-b border-gray-100">Información</h3>
             <div className="space-y-3">
@@ -164,7 +170,7 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
           </div>
 
           {/* Órdenes vinculadas */}
-          {presupuesto.ordenes.length > 0 && (
+          {presupuesto.ordenes?.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                 <ClipboardList size={15} className="text-gray-400" />
@@ -188,7 +194,6 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
             </div>
           )}
 
-          {/* Observaciones internas */}
           {presupuesto.observaciones && (
             <div className="bg-amber-50 rounded-xl border border-amber-200 p-5">
               <h3 className="text-sm font-semibold text-amber-700 mb-2">Observaciones internas</h3>
@@ -199,7 +204,6 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
 
         {/* Columna derecha */}
         <div className="col-span-2 space-y-6">
-          {/* Descripción */}
           {presupuesto.descripcion && (
             <div className="bg-white rounded-xl border border-gray-100 p-5">
               <h3 className="text-sm font-semibold text-gray-700 mb-2">Descripción del trabajo</h3>
@@ -207,7 +211,7 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
             </div>
           )}
 
-          {/* Servicios libres */}
+          {/* Servicios */}
           {presupuesto.serviciosLibres.length > 0 && (
             <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
               <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
@@ -235,9 +239,7 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
               ))}
               <div className="flex justify-end px-5 py-3 bg-gray-50">
                 <span className="text-xs text-gray-500 mr-3">Total servicios</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {presupuesto.serviciosLibres.reduce((a: number, s: any) => a + s.cantidad * s.precio, 0).toFixed(2)} €
-                </span>
+                <span className="text-sm font-bold text-gray-800">{totalServicios.toFixed(2)} €</span>
               </div>
             </div>
           )}
@@ -274,9 +276,7 @@ export default function PresupuestoDetalle({ presupuesto, empresa }: { presupues
               ))}
               <div className="flex justify-end px-5 py-3 bg-gray-50">
                 <span className="text-xs text-gray-500 mr-3">Total repuestos</span>
-                <span className="text-sm font-bold text-gray-800">
-                  {presupuesto.repuestos.reduce((a: number, r: any) => a + r.cantidad * r.precioVenta, 0).toFixed(2)} €
-                </span>
+                <span className="text-sm font-bold text-gray-800">{totalRepuestos.toFixed(2)} €</span>
               </div>
             </div>
           )}

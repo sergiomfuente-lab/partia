@@ -14,18 +14,19 @@ type TipoServicio = { id: string; nombre: string; unidad: string };
 
 type LineaEstandar = {
   _key:           string;
-  fecha:          string;
   tipoServicioId: string;
+  descripcion:    string;
   cantidad:       string;
   precio:         string;
-  descripcion:    string;
 };
+
 type LineaLibre = {
   _key:        string;
   descripcion: string;
   cantidad:    string;
   precio:      string;
 };
+
 type LineaRepuesto = {
   _key:        string;
   referencia:  string;
@@ -44,10 +45,10 @@ export default function NuevoPresupuestoForm({
   precioHoraDefault,
   precioPorKmDefault,
 }: {
-  clientes:          Cliente[];
-  tiposServicio:     TipoServicio[];
-  precioHoraDefault: number;
-  precioPorKmDefault:number;
+  clientes:           Cliente[];
+  tiposServicio:      TipoServicio[];
+  precioHoraDefault:  number;
+  precioPorKmDefault: number;
 }) {
   const router         = useRouter();
   const searchParams   = useSearchParams();
@@ -76,10 +77,9 @@ export default function NuevoPresupuestoForm({
 
   const setField = (f: string, v: string) => setForm((prev) => ({ ...prev, [f]: v }));
 
-  // Precio activo según cliente
   const clienteActual = clientes.find((c) => c.id === form.clienteId);
-  const precioHora    = clienteActual?.precioHoraEspecial   ?? precioHoraDefault;
-  const precioPorKm   = clienteActual?.precioPorKmEspecial  ?? precioPorKmDefault;
+  const precioHora    = clienteActual?.precioHoraEspecial  ?? precioHoraDefault;
+  const precioPorKm   = clienteActual?.precioPorKmEspecial ?? precioPorKmDefault;
 
   useEffect(() => {
     if (!form.clienteId) { setMaquinas([]); return; }
@@ -93,9 +93,8 @@ export default function NuevoPresupuestoForm({
     const primerTipo = tiposServicio[0];
     const precio     = primerTipo?.unidad === "h" ? precioHora : precioPorKm;
     setServiciosEstandar((prev) => [...prev, {
-      _key: uid(), fecha: hoy(),
-      tipoServicioId: primerTipo?.id ?? "",
-      cantidad: "0", precio: String(precio), descripcion: "",
+      _key: uid(), tipoServicioId: primerTipo?.id ?? "",
+      descripcion: "", cantidad: "0", precio: String(precio),
     }]);
   };
 
@@ -148,8 +147,8 @@ export default function NuevoPresupuestoForm({
     ? baseImponible * (descuentoValor / 100)
     : descuentoValor;
   const baseConDescuento = Math.max(0, baseImponible - descuento);
-  const iva    = baseConDescuento * 0.21;
-  const total  = baseConDescuento + iva;
+  const iva   = baseConDescuento * 0.21;
+  const total = baseConDescuento + iva;
 
   // ---- Submit ----
   const handleSubmit = async (e: React.FormEvent) => {
@@ -158,7 +157,6 @@ export default function NuevoPresupuestoForm({
     if (!form.clienteId) { setError("Selecciona un cliente."); return; }
     setLoading(true);
 
-    // Combinar servicios estándar y libres en serviciosLibres para la API
     const todasLineasLibres = [
       ...serviciosEstandar.map((s) => {
         const tipo = tiposServicio.find((t) => t.id === s.tipoServicioId);
@@ -180,9 +178,9 @@ export default function NuevoPresupuestoForm({
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         ...form,
-        maquinaId:      form.maquinaId     || null,
-        validezHasta:   form.validezHasta  || null,
-        descuentoValor: descuentoValor,
+        maquinaId:      form.maquinaId    || null,
+        validezHasta:   form.validezHasta || null,
+        descuentoValor,
         serviciosLibres: todasLineasLibres,
         repuestos: repuestos.map((r) => ({
           referencia:  r.referencia  || null,
@@ -348,103 +346,105 @@ export default function NuevoPresupuestoForm({
                 </div>
               ) : (
                 <div>
-                  {/* Cabecera tabla servicios estándar */}
-                  {serviciosEstandar.length > 0 && (
-                    <>
-                      <div className="grid grid-cols-12 px-5 py-2 bg-amber-50 border-b border-amber-100">
-                        <div className="col-span-2 text-xs text-amber-600 uppercase tracking-wide">Fecha</div>
-                        <div className="col-span-3 text-xs text-amber-600 uppercase tracking-wide">Tipo</div>
-                        <div className="col-span-3 text-xs text-amber-600 uppercase tracking-wide">Descripción</div>
-                        <div className="col-span-1 text-xs text-amber-600 uppercase tracking-wide text-center">Cant.</div>
-                        <div className="col-span-2 text-xs text-amber-600 uppercase tracking-wide text-center">Precio</div>
-                        <div className="col-span-1"></div>
-                      </div>
-                      {serviciosEstandar.map((s) => {
-                        const tipo = tiposServicio.find((t) => t.id === s.tipoServicioId);
-                        return (
-                          <div key={s._key} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center gap-2 bg-amber-50/30">
-                            <div className="col-span-2">
-                              <input type="date" value={s.fecha}
-                                onChange={(e) => updateServicioEstandar(s._key, "fecha", e.target.value)}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
-                            </div>
-                            <div className="col-span-3">
-                              <select value={s.tipoServicioId}
-                                onChange={(e) => updateServicioEstandar(s._key, "tipoServicioId", e.target.value)}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
-                                {tiposServicio.map((t) => (
-                                  <option key={t.id} value={t.id}>{t.nombre}</option>
-                                ))}
-                              </select>
-                            </div>
-                            <div className="col-span-3">
-                              <input type="text" placeholder="Descripción opcional..."
-                                value={s.descripcion}
-                                onChange={(e) => updateServicioEstandar(s._key, "descripcion", e.target.value)}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
-                            </div>
-                            <div className="col-span-1">
-                              <input type="number" min="0" step="0.5" value={s.cantidad}
-                                onChange={(e) => updateServicioEstandar(s._key, "cantidad", e.target.value)}
-                                className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
-                            </div>
-                            <div className="col-span-2">
-                              <div className="flex items-center gap-1">
-                                <input type="number" min="0" step="0.01" value={s.precio}
-                                  onChange={(e) => updateServicioEstandar(s._key, "precio", e.target.value)}
-                                  className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
-                                <span className="text-xs text-gray-400 shrink-0">€/{tipo?.unidad ?? "ud"}</span>
-                              </div>
-                            </div>
-                            <div className="col-span-1 flex justify-end">
-                              <button type="button" onClick={() => removeServicioEstandar(s._key)}
-                                className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
-                                <Trash2 size={13} />
-                              </button>
-                            </div>
+                  {/* Cabecera tabla compartida */}
+                  <div className="grid grid-cols-12 px-5 py-2 bg-gray-50 border-b border-gray-100">
+                    <div className="col-span-4 text-xs text-gray-400 uppercase tracking-wide">Tipo / Descripción</div>
+                    <div className="col-span-3 text-xs text-gray-400 uppercase tracking-wide">Descripción adicional</div>
+                    <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-center">Cant.</div>
+                    <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide text-center">Precio</div>
+                    <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-right">Total</div>
+                    <div className="col-span-1"></div>
+                  </div>
+
+                  {/* Servicios estándar */}
+                  {serviciosEstandar.map((s) => {
+                    const tipo  = tiposServicio.find((t) => t.id === s.tipoServicioId);
+                    const total = parseFloat(s.cantidad || "0") * parseFloat(s.precio || "0");
+                    return (
+                      <div key={s._key} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center gap-2 bg-amber-50/20">
+                        <div className="col-span-4">
+                          <select value={s.tipoServicioId}
+                            onChange={(e) => updateServicioEstandar(s._key, "tipoServicioId", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white text-gray-700">
+                            {tiposServicio.map((t) => (
+                              <option key={t.id} value={t.id}>{t.nombre}</option>
+                            ))}
+                          </select>
+                        </div>
+                        <div className="col-span-3">
+                          <input type="text" placeholder="Descripción opcional..."
+                            value={s.descripcion}
+                            onChange={(e) => updateServicioEstandar(s._key, "descripcion", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                        </div>
+                        <div className="col-span-1">
+                          <input type="number" min="0" step="0.5" value={s.cantidad}
+                            onChange={(e) => updateServicioEstandar(s._key, "cantidad", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
+                        </div>
+                        <div className="col-span-2">
+                          <div className="flex items-center gap-1">
+                            <input type="number" min="0" step="0.01" value={s.precio}
+                              onChange={(e) => updateServicioEstandar(s._key, "precio", e.target.value)}
+                              className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
+                            <span className="text-xs text-gray-400 shrink-0">€/{tipo?.unidad ?? "ud"}</span>
                           </div>
-                        );
-                      })}
-                    </>
-                  )}
+                        </div>
+                        <div className="col-span-1 text-xs font-semibold text-gray-700 text-right">
+                          {total.toFixed(2)} €
+                        </div>
+                        <div className="col-span-1 flex justify-end">
+                          <button type="button" onClick={() => removeServicioEstandar(s._key)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
 
                   {/* Servicios libres */}
-                  {serviciosLibres.length > 0 && (
-                    <>
-                      <div className="grid grid-cols-12 px-5 py-2 bg-purple-50 border-b border-purple-100">
-                        <div className="col-span-6 text-xs text-purple-600 uppercase tracking-wide">Descripción libre</div>
-                        <div className="col-span-2 text-xs text-purple-600 uppercase tracking-wide text-center">Cantidad</div>
-                        <div className="col-span-3 text-xs text-purple-600 uppercase tracking-wide text-center">Precio ud.</div>
-                        <div className="col-span-1"></div>
-                      </div>
-                      {serviciosLibres.map((s) => (
-                        <div key={s._key} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center gap-2 bg-purple-50/30">
-                          <div className="col-span-6">
-                            <input type="text" placeholder="Descripción del servicio..."
-                              value={s.descripcion}
-                              onChange={(e) => updateServicioLibre(s._key, "descripcion", e.target.value)}
-                              className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
-                          </div>
-                          <div className="col-span-2">
-                            <input type="number" min="0" step="0.01" value={s.cantidad}
-                              onChange={(e) => updateServicioLibre(s._key, "cantidad", e.target.value)}
-                              className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
-                          </div>
-                          <div className="col-span-3">
+                  {serviciosLibres.map((s) => {
+                    const total = parseFloat(s.cantidad || "0") * parseFloat(s.precio || "0");
+                    return (
+                      <div key={s._key} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center gap-2 bg-purple-50/20">
+                        <div className="col-span-4">
+                          <input type="text" placeholder="Descripción del servicio..."
+                            value={s.descripcion}
+                            onChange={(e) => updateServicioLibre(s._key, "descripcion", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-purple-200 rounded-lg focus:outline-none focus:border-purple-400 bg-white" />
+                        </div>
+                        <div className="col-span-3">
+                          <input type="text" placeholder="Notas adicionales..."
+                            value={(s as any).descripcionAdicional ?? ""}
+                            onChange={(e) => updateServicioLibre(s._key, "descripcionAdicional", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                        </div>
+                        <div className="col-span-1">
+                          <input type="number" min="0" step="0.01" value={s.cantidad}
+                            onChange={(e) => updateServicioLibre(s._key, "cantidad", e.target.value)}
+                            className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
+                        </div>
+                        <div className="col-span-2">
+                          <div className="flex items-center gap-1">
                             <input type="number" min="0" step="0.01" value={s.precio}
                               onChange={(e) => updateServicioLibre(s._key, "precio", e.target.value)}
                               className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-center" />
-                          </div>
-                          <div className="col-span-1 flex justify-end">
-                            <button type="button" onClick={() => removeServicioLibre(s._key)}
-                              className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
-                              <Trash2 size={13} />
-                            </button>
+                            <span className="text-xs text-gray-400 shrink-0">€/ud</span>
                           </div>
                         </div>
-                      ))}
-                    </>
-                  )}
+                        <div className="col-span-1 text-xs font-semibold text-gray-700 text-right">
+                          {total.toFixed(2)} €
+                        </div>
+                        <div className="col-span-1 flex justify-end">
+                          <button type="button" onClick={() => removeServicioLibre(s._key)}
+                            className="w-7 h-7 flex items-center justify-center rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 transition-colors cursor-pointer">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
 
                   {/* Total servicios */}
                   <div className="flex justify-end px-5 py-3 bg-gray-50">
@@ -619,7 +619,6 @@ export default function NuevoPresupuestoForm({
               </div>
             </div>
 
-            {/* Tarifas */}
             {form.clienteId && (
               <div className="bg-white rounded-xl border border-gray-100 p-5">
                 <div className="text-xs font-medium text-gray-400 uppercase tracking-wide mb-3">Tarifas aplicadas</div>
