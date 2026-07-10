@@ -9,10 +9,11 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const { id } = await params;
+  const { id }    = await params;
+  const empresaId = (session.user as any).empresaId;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { usuarioId: session.user!.id } },
+    where: { id, cliente: { empresaId } },
     include: {
       cliente:  true,
       maquina:  true,
@@ -20,8 +21,9 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
         include: { tipoServicio: true },
         orderBy: { fecha: "asc" },
       },
-      repuestos: true,
-      factura:  { select: { id: true, numero: true, estado: true } },
+      serviciosLibres: true,
+      repuestos:       true,
+      factura: { select: { id: true, numero: true, estado: true } },
     },
   });
 

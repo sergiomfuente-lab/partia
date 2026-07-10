@@ -4,9 +4,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
   const { id }    = await params;
@@ -23,18 +21,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     },
   });
 
-  if (!orden) {
-    return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
-  }
-
+  if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
   return NextResponse.json(orden);
 }
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
   const { id }    = await params;
@@ -42,23 +35,27 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const {
     fecha, direccionReparacion, trabajosRealizados,
     observaciones, estado, servicios, serviciosLibres, repuestos,
+    firmaDni, firmaObservaciones, firmaBase64,
+    mostrarPrecios,
   } = body;
 
   const orden = await prisma.orden.findFirst({
     where: { id, cliente: { empresaId } },
   });
-  if (!orden) {
-    return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
-  }
+  if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 
   const updated = await prisma.orden.update({
     where: { id },
     data: {
-      ...(fecha               !== undefined && { fecha: new Date(fecha) }),
+      ...(fecha               !== undefined && { fecha:               new Date(fecha) }),
       ...(direccionReparacion !== undefined && { direccionReparacion }),
       ...(trabajosRealizados  !== undefined && { trabajosRealizados }),
       ...(observaciones       !== undefined && { observaciones }),
       ...(estado              !== undefined && { estado }),
+      ...(mostrarPrecios      !== undefined && { mostrarPrecios }),
+      ...(firmaDni            !== undefined && { firmaDni }),
+      ...(firmaObservaciones  !== undefined && { firmaObservaciones }),
+      ...(firmaBase64         !== undefined && { firmaBase64 }),
       ...(servicios !== undefined && {
         servicios: {
           deleteMany: {},
@@ -108,9 +105,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
-  if (!session?.user?.id) {
-    return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  }
+  if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
   const { id }    = await params;
@@ -118,9 +113,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   const orden = await prisma.orden.findFirst({
     where: { id, cliente: { empresaId } },
   });
-  if (!orden) {
-    return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
-  }
+  if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 
   await prisma.servicio.deleteMany({ where: { ordenId: id } });
   await prisma.servicioLibre.deleteMany({ where: { ordenId: id } });
