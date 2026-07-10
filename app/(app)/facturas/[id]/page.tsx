@@ -9,25 +9,32 @@ export default async function FacturaDetallePage({ params }: { params: Promise<{
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const { id } = await params;
-  const empresaId = (session.user as any).empresaId;
+  const { id }      = await params;
+  const empresaId   = (session.user as any).empresaId;
 
   const [factura, empresa] = await Promise.all([
     prisma.factura.findFirst({
       where: { id, cliente: { empresaId } },
       include: {
-        cliente: true,
+        cliente:        true,
+        serie:          true,
+        lineasDirectas: true,
+        abonos: {
+          include: { serie: true },
+          orderBy: { fecha: "desc" },
+        },
         ordenes: {
           include: {
-            servicios:  { include: { tipoServicio: true } },
-            repuestos:  true,
-            maquina:    true,
+            servicios:       { include: { tipoServicio: true } },
+            serviciosLibres: true,
+            repuestos:       true,
+            maquina:         true,
           },
         },
       },
     }),
     prisma.empresa.findUnique({
-      where: { id: empresaId },
+      where:  { id: empresaId },
       select: {
         nombreFiscal: true, cifNif: true,
         direccionFiscal: true, codigoPostal: true,
