@@ -9,11 +9,20 @@ export default async function FacturasPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
-  const clientes = await prisma.cliente.findMany({
-    where: { usuarioId: session.user!.id, activo: true },
-    select: { id: true, nombre: true },
-    orderBy: { nombre: "asc" },
-  });
+  const empresaId = (session.user as any).empresaId;
+  if (!empresaId) redirect("/dashboard");
 
-  return <FacturasLista clientes={clientes} />;
+  const [clientes, series] = await Promise.all([
+    prisma.cliente.findMany({
+      where:   { empresaId, activo: true },
+      select:  { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    prisma.serieFacturacion.findMany({
+      where:   { empresaId, activa: true },
+      orderBy: { createdAt: "asc" },
+    }),
+  ]);
+
+  return <FacturasLista clientes={clientes} series={series} />;
 }
