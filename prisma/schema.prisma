@@ -34,6 +34,8 @@ model Empresa {
   productos        Producto[]
   compras          Compra[]
   presupuestos     Presupuesto[]
+  series           SerieFacturacion[]
+  abonos           Abono[]
 }
 
 model Usuario {
@@ -74,6 +76,22 @@ model ContadorPresupuesto {
   @@unique([empresaId, anio])
 }
 
+model SerieFacturacion {
+  id             String    @id @default(cuid())
+  nombre         String
+  prefijo        String
+  contadorActual Int       @default(0)
+  prefijoAbono   String
+  contadorAbono  Int       @default(0)
+  predeterminada Boolean   @default(false)
+  activa         Boolean   @default(true)
+  empresaId      String
+  empresa        Empresa   @relation(fields: [empresaId], references: [id])
+  facturas       Factura[]
+  abonos         Abono[]
+  createdAt      DateTime  @default(now())
+}
+
 model Cliente {
   id                   String        @id @default(cuid())
   nombre               String
@@ -88,6 +106,7 @@ model Cliente {
   precioHoraEspecial   Float?
   precioPorKmEspecial  Float?
   activo               Boolean       @default(true)
+  mostrarPrecios       Boolean       @default(true)
   empresaId            String
   empresa              Empresa       @relation(fields: [empresaId], references: [id])
   usuarioId            String?
@@ -116,37 +135,42 @@ model Maquina {
 }
 
 model TipoServicio {
-  id        String     @id @default(cuid())
-  nombre    String
-  unidad    String     @default("ud")
-  activo    Boolean    @default(true)
-  orden     Int        @default(0)
-  createdAt DateTime   @default(now())
-  servicios Servicio[]
+  id           String        @id @default(cuid())
+  nombre       String
+  unidad       String        @default("ud")
+  activo       Boolean       @default(true)
+  orden        Int           @default(0)
+  createdAt    DateTime      @default(now())
+  servicios    Servicio[]
+  facturaLineas FacturaLinea[]
 }
 
 model Orden {
-  id                  String             @id @default(cuid())
-  numero              String             @unique
-  fecha               DateTime           @default(now())
+  id                  String            @id @default(cuid())
+  numero              String            @unique
+  fecha               DateTime          @default(now())
   direccionReparacion String?
   trabajosRealizados  String?
   observaciones       String?
-  estado              String             @default("pendiente")
+  estado              String            @default("pendiente")
+  mostrarPrecios      Boolean           @default(true)
+  firmaDni            String?
+  firmaObservaciones  String?
+  firmaBase64         String?
   clienteId           String
-  cliente             Cliente            @relation(fields: [clienteId], references: [id])
+  cliente             Cliente           @relation(fields: [clienteId], references: [id])
   maquinaId           String
-  maquina             Maquina            @relation(fields: [maquinaId], references: [id])
+  maquina             Maquina           @relation(fields: [maquinaId], references: [id])
   servicios           Servicio[]
   serviciosLibres     ServicioLibre[]
   repuestos           Repuesto[]
   facturaId           String?
-  factura             Factura?           @relation(fields: [facturaId], references: [id])
+  factura             Factura?          @relation(fields: [facturaId], references: [id])
   presupuestoId       String?
-  presupuesto         Presupuesto?       @relation(fields: [presupuestoId], references: [id])
+  presupuesto         Presupuesto?      @relation(fields: [presupuestoId], references: [id])
   lineasCompra        CompraLinea[]
   movimientosStock    MovimientoStock[]
-  createdAt           DateTime           @default(now())
+  createdAt           DateTime          @default(now())
 }
 
 model Servicio {
@@ -163,47 +187,95 @@ model Servicio {
 }
 
 model ServicioLibre {
-  id          String   @id @default(cuid())
-  descripcion String
-  cantidad    Float    @default(1)
-  precio      Float    @default(0)
-  ordenId     String?
-  orden       Orden?   @relation(fields: [ordenId], references: [id])
+  id            String       @id @default(cuid())
+  descripcion   String
+  cantidad      Float        @default(1)
+  precio        Float        @default(0)
+  ordenId       String?
+  orden         Orden?       @relation(fields: [ordenId], references: [id])
   presupuestoId String?
-  presupuesto Presupuesto? @relation(fields: [presupuestoId], references: [id])
-  createdAt   DateTime @default(now())
+  presupuesto   Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  createdAt     DateTime     @default(now())
 }
 
 model Repuesto {
-  id          String   @id @default(cuid())
-  referencia  String?
-  descripcion String
-  cantidad    Int      @default(1)
-  precioCoste Float
-  precioVenta Float
-  ordenId     String?
-  orden       Orden?   @relation(fields: [ordenId], references: [id])
+  id            String       @id @default(cuid())
+  referencia    String?
+  descripcion   String
+  cantidad      Int          @default(1)
+  precioCoste   Float
+  precioVenta   Float
+  ordenId       String?
+  orden         Orden?       @relation(fields: [ordenId], references: [id])
   presupuestoId String?
-  presupuesto Presupuesto? @relation(fields: [presupuestoId], references: [id])
+  presupuesto   Presupuesto? @relation(fields: [presupuestoId], references: [id])
 }
 
 model Factura {
-  id             String    @id @default(cuid())
-  numero         String    @unique
-  fecha          DateTime  @default(now())
+  id             String           @id @default(cuid())
+  numero         String           @unique
+  fecha          DateTime         @default(now())
   vencimiento    DateTime?
-  estado         String    @default("pendiente")
-  baseImponible  Float     @default(0)
-  descuento      Float     @default(0)
-  tipoDescuento  String    @default("euro")
-  descuentoValor Float     @default(0)
-  iva            Float     @default(21)
-  total          Float     @default(0)
+  estado         String           @default("pendiente")
+  baseImponible  Float            @default(0)
+  descuento      Float            @default(0)
+  tipoDescuento  String           @default("euro")
+  descuentoValor Float            @default(0)
+  iva            Float            @default(21)
+  total          Float            @default(0)
   notas          String?
+  esDirecta      Boolean          @default(false)
+  serieId        String?
+  serie          SerieFacturacion? @relation(fields: [serieId], references: [id])
   clienteId      String
-  cliente        Cliente   @relation(fields: [clienteId], references: [id])
+  cliente        Cliente          @relation(fields: [clienteId], references: [id])
   ordenes        Orden[]
-  createdAt      DateTime  @default(now())
+  lineasDirectas FacturaLinea[]
+  abonos         Abono[]
+  createdAt      DateTime         @default(now())
+}
+
+model FacturaLinea {
+  id             String        @id @default(cuid())
+  facturaId      String
+  factura        Factura       @relation(fields: [facturaId], references: [id])
+  tipo           String        @default("libre")
+  tipoServicioId String?
+  tipoServicio   TipoServicio? @relation(fields: [tipoServicioId], references: [id])
+  descripcion    String
+  cantidad       Float         @default(1)
+  precioCoste    Float         @default(0)
+  precioVenta    Float         @default(0)
+  createdAt      DateTime      @default(now())
+}
+
+model Abono {
+  id            String           @id @default(cuid())
+  numero        String           @unique
+  fecha         DateTime         @default(now())
+  facturaId     String
+  factura       Factura          @relation(fields: [facturaId], references: [id])
+  serieId       String
+  serie         SerieFacturacion @relation(fields: [serieId], references: [id])
+  tipo          String           @default("total")
+  baseImponible Float            @default(0)
+  iva           Float            @default(21)
+  total         Float            @default(0)
+  motivo        String?
+  empresaId     String
+  empresa       Empresa          @relation(fields: [empresaId], references: [id])
+  lineas        AbonoLinea[]
+  createdAt     DateTime         @default(now())
+}
+
+model AbonoLinea {
+  id          String  @id @default(cuid())
+  abonoId     String
+  abono       Abono   @relation(fields: [abonoId], references: [id])
+  descripcion String
+  cantidad    Float   @default(1)
+  precio      Float   @default(0)
+  total       Float   @default(0)
 }
 
 model Presupuesto {

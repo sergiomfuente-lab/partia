@@ -11,14 +11,14 @@ export default async function ConfiguracionPage() {
 
   const empresaId = (session.user as any).empresaId;
 
-  const [usuario, tiposServicio, empresa, contador] = await Promise.all([
+  const [usuario, tiposServicio, empresa, contador, series] = await Promise.all([
     prisma.usuario.findUnique({
-      where: { id: session.user.id },
+      where:  { id: session.user.id },
       select: { id: true, nombre: true, email: true },
     }),
     prisma.tipoServicio.findMany({ orderBy: { orden: "asc" } }),
     prisma.empresa.findUnique({
-      where: { id: empresaId },
+      where:  { id: empresaId },
       select: {
         id: true, nombre: true, nombreFiscal: true, cifNif: true,
         direccionFiscal: true, codigoPostal: true, ciudad: true,
@@ -35,6 +35,10 @@ export default async function ConfiguracionPage() {
         },
       },
     }),
+    prisma.serieFacturacion.findMany({
+      where:   { empresaId },
+      orderBy: { createdAt: "asc" },
+    }),
   ]);
 
   if (!usuario) redirect("/login");
@@ -46,6 +50,7 @@ export default async function ConfiguracionPage() {
       empresa={JSON.parse(JSON.stringify(empresa ?? {}))}
       contadorActual={contador?.contador ?? 0}
       anioActual={new Date().getFullYear()}
+      series={JSON.parse(JSON.stringify(series))}
     />
   );
 }
