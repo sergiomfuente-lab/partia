@@ -11,6 +11,7 @@ type Usuario = {
   id:        string;
   nombre:    string;
   email:     string;
+  dni:       string | null;
   rol:       string;
   activo:    boolean;
   createdAt: string;
@@ -30,18 +31,22 @@ export default function UsuariosPanel({
   usuarios: Usuario[];
   rolActual: string;
 }) {
-  const router = useRouter();
+  const router  = useRouter();
   const [usuarios, setUsuarios]         = useState<Usuario[]>(usuariosIniciales);
   const [editando, setEditando]         = useState<string | null>(null);
   const [error, setError]               = useState("");
 
   // Nuevo usuario
   const [mostrarForm, setMostrarForm]   = useState(false);
-  const [nuevoForm, setNuevoForm]       = useState({ nombre: "", email: "", password: "", rol: "tecnico" });
+  const [nuevoForm, setNuevoForm]       = useState({
+    nombre: "", email: "", password: "", rol: "tecnico", dni: "",
+  });
   const [creando, setCreando]           = useState(false);
 
   // Edición inline
-  const [editForm, setEditForm]         = useState<{ nombre: string; rol: string }>({ nombre: "", rol: "" });
+  const [editForm, setEditForm] = useState<{ nombre: string; rol: string; dni: string }>({
+    nombre: "", rol: "", dni: "",
+  });
 
   // Reset password
   const [resetId, setResetId]               = useState<string | null>(null);
@@ -55,7 +60,7 @@ export default function UsuariosPanel({
 
   const handleEditar = (u: Usuario) => {
     setEditando(u.id);
-    setEditForm({ nombre: u.nombre, rol: u.rol });
+    setEditForm({ nombre: u.nombre, rol: u.rol, dni: u.dni ?? "" });
   };
 
   const handleGuardar = async (id: string) => {
@@ -104,7 +109,7 @@ export default function UsuariosPanel({
 
     const nuevo = await res.json();
     setUsuarios((prev) => [...prev, nuevo]);
-    setNuevoForm({ nombre: "", email: "", password: "", rol: "tecnico" });
+    setNuevoForm({ nombre: "", email: "", password: "", rol: "tecnico", dni: "" });
     setMostrarForm(false);
     setCreando(false);
     router.refresh();
@@ -168,47 +173,42 @@ export default function UsuariosPanel({
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Nombre <span className="text-red-400">*</span>
               </label>
-              <input
-                type="text"
-                value={nuevoForm.nombre}
+              <input type="text" value={nuevoForm.nombre} required
                 onChange={(e) => setNuevoForm((p) => ({ ...p, nombre: e.target.value }))}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white"
-                required
-              />
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Email <span className="text-red-400">*</span>
               </label>
-              <input
-                type="email"
-                value={nuevoForm.email}
+              <input type="email" value={nuevoForm.email} required
                 onChange={(e) => setNuevoForm((p) => ({ ...p, email: e.target.value }))}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white"
-                required
-              />
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                DNI (opcional)
+              </label>
+              <input type="text" value={nuevoForm.dni}
+                onChange={(e) => setNuevoForm((p) => ({ ...p, dni: e.target.value }))}
+                placeholder="Ej: 12345678A"
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white font-mono" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Contraseña temporal <span className="text-red-400">*</span>
               </label>
-              <input
-                type="password"
-                value={nuevoForm.password}
+              <input type="password" value={nuevoForm.password} required
                 onChange={(e) => setNuevoForm((p) => ({ ...p, password: e.target.value }))}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white"
-                required
-              />
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
             </div>
             <div>
               <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                 Rol
               </label>
-              <select
-                value={nuevoForm.rol}
+              <select value={nuevoForm.rol}
                 onChange={(e) => setNuevoForm((p) => ({ ...p, rol: e.target.value }))}
-                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700"
-              >
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
                 {rolesDisponibles.map((r) => (
                   <option key={r} value={r}>{ROL_CONFIG[r]?.label ?? r}</option>
                 ))}
@@ -220,18 +220,13 @@ export default function UsuariosPanel({
               </div>
             )}
             <div className="col-span-2 flex justify-end gap-3">
-              <button
-                type="button"
+              <button type="button"
                 onClick={() => { setMostrarForm(false); setError(""); }}
-                className="px-5 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer"
-              >
+                className="px-5 py-2.5 text-sm text-gray-500 hover:text-gray-700 transition-colors cursor-pointer">
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={creando}
-                className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer"
-              >
+              <button type="submit" disabled={creando}
+                className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer">
                 <Save size={15} />
                 {creando ? "Creando..." : "Crear usuario"}
               </button>
@@ -243,8 +238,9 @@ export default function UsuariosPanel({
       {/* Tabla */}
       <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
         <div className="grid grid-cols-12 px-5 py-3 bg-gray-50 border-b border-gray-100">
-          <div className="col-span-3 text-xs text-gray-400 uppercase tracking-wide">Nombre</div>
+          <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide">Nombre</div>
           <div className="col-span-3 text-xs text-gray-400 uppercase tracking-wide">Email</div>
+          <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide">DNI</div>
           <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide">Rol</div>
           <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-center">Estado</div>
           <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide">Alta</div>
@@ -264,14 +260,11 @@ export default function UsuariosPanel({
             return (
               <div key={u.id} className="grid grid-cols-12 px-5 py-4 border-b border-gray-50 items-center hover:bg-gray-50 transition-colors">
                 {/* Nombre */}
-                <div className="col-span-3">
+                <div className="col-span-2">
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editForm.nombre}
+                    <input type="text" value={editForm.nombre}
                       onChange={(e) => setEditForm((p) => ({ ...p, nombre: e.target.value }))}
-                      className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white"
-                    />
+                      className="w-full px-2 py-1.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
                   ) : (
                     <div className="text-sm font-medium text-gray-800">{u.nombre}</div>
                   )}
@@ -280,14 +273,24 @@ export default function UsuariosPanel({
                 {/* Email */}
                 <div className="col-span-3 text-sm text-gray-500 truncate">{u.email}</div>
 
+                {/* DNI */}
+                <div className="col-span-1">
+                  {isEditing ? (
+                    <input type="text" value={editForm.dni}
+                      onChange={(e) => setEditForm((p) => ({ ...p, dni: e.target.value }))}
+                      placeholder="DNI..."
+                      className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white font-mono" />
+                  ) : (
+                    <div className="text-xs text-gray-400 font-mono">{u.dni || "—"}</div>
+                  )}
+                </div>
+
                 {/* Rol */}
                 <div className="col-span-2">
                   {isEditing ? (
-                    <select
-                      value={editForm.rol}
+                    <select value={editForm.rol}
                       onChange={(e) => setEditForm((p) => ({ ...p, rol: e.target.value }))}
-                      className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700"
-                    >
+                      className="w-full px-2 py-1.5 text-xs border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
                       {rolesDisponibles.map((r) => (
                         <option key={r} value={r}>{ROL_CONFIG[r]?.label ?? r}</option>
                       ))}
@@ -317,50 +320,37 @@ export default function UsuariosPanel({
                 <div className="col-span-2 flex gap-2 justify-center">
                   {isEditing ? (
                     <>
-                      <button
-                        onClick={() => handleGuardar(u.id)}
+                      <button onClick={() => handleGuardar(u.id)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-green-200 text-green-600 hover:bg-green-50 transition-colors cursor-pointer"
-                        title="Guardar"
-                      >
+                        title="Guardar">
                         <Check size={15} />
                       </button>
-                      <button
-                        onClick={() => setEditando(null)}
+                      <button onClick={() => setEditando(null)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-gray-50 transition-colors cursor-pointer"
-                        title="Cancelar"
-                      >
+                        title="Cancelar">
                         <X size={15} />
                       </button>
                     </>
                   ) : (
                     <>
-                      <button
-                        onClick={() => handleEditar(u)}
+                      <button onClick={() => handleEditar(u)}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-colors cursor-pointer"
-                        title="Editar"
-                      >
+                        title="Editar">
                         <Pencil size={15} />
                       </button>
                       <button
-                        onClick={() => {
-                          setResetId(u.id);
-                          setPasswordTemporal("");
-                          setResetError("");
-                        }}
+                        onClick={() => { setResetId(u.id); setPasswordTemporal(""); setResetError(""); }}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-purple-50 hover:text-purple-600 hover:border-purple-200 transition-colors cursor-pointer"
-                        title="Resetear contraseña"
-                      >
+                        title="Resetear contraseña">
                         <KeyRound size={15} />
                       </button>
-                      <button
-                        onClick={() => handleToggleActivo(u)}
+                      <button onClick={() => handleToggleActivo(u)}
                         className={`w-8 h-8 flex items-center justify-center rounded-lg border transition-colors cursor-pointer ${
                           u.activo
                             ? "border-gray-200 text-gray-400 hover:bg-red-50 hover:text-red-500 hover:border-red-200"
                             : "border-green-200 text-green-600 hover:bg-green-50"
                         }`}
-                        title={u.activo ? "Desactivar" : "Activar"}
-                      >
+                        title={u.activo ? "Desactivar" : "Activar"}>
                         {u.activo ? <PowerOff size={15} /> : <Power size={15} />}
                       </button>
                     </>
@@ -382,31 +372,21 @@ export default function UsuariosPanel({
             El usuario deberá cambiar esta contraseña al iniciar sesión.
           </p>
           <div className="flex gap-3">
-            <input
-              type="text"
-              placeholder="Contraseña temporal (mín. 6 caracteres)"
+            <input type="text" placeholder="Contraseña temporal (mín. 6 caracteres)"
               value={passwordTemporal}
               onChange={(e) => setPasswordTemporal(e.target.value)}
-              className="flex-1 px-3 py-2.5 text-sm border border-purple-200 rounded-lg focus:outline-none focus:border-purple-400 bg-white"
-            />
-            <button
-              onClick={() => handleResetPassword(resetId)}
-              disabled={resetting}
-              className="flex items-center gap-2 bg-purple-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 cursor-pointer"
-            >
+              className="flex-1 px-3 py-2.5 text-sm border border-purple-200 rounded-lg focus:outline-none focus:border-purple-400 bg-white" />
+            <button onClick={() => handleResetPassword(resetId)} disabled={resetting}
+              className="flex items-center gap-2 bg-purple-600 text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-purple-700 transition-colors disabled:opacity-50 cursor-pointer">
               <Save size={15} />
               {resetting ? "Guardando..." : "Resetear"}
             </button>
-            <button
-              onClick={() => { setResetId(null); setPasswordTemporal(""); setResetError(""); }}
-              className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer"
-            >
+            <button onClick={() => { setResetId(null); setPasswordTemporal(""); setResetError(""); }}
+              className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer">
               Cancelar
             </button>
           </div>
-          {resetError && (
-            <p className="text-xs text-red-500 mt-2">{resetError}</p>
-          )}
+          {resetError && <p className="text-xs text-red-500 mt-2">{resetError}</p>}
         </div>
       )}
     </div>

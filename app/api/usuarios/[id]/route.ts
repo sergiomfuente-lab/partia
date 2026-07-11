@@ -19,7 +19,6 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const usuario = await prisma.usuario.findFirst({ where: { id, empresaId } });
   if (!usuario) return NextResponse.json({ error: "Usuario no encontrado" }, { status: 404 });
 
-  // No se puede cambiar el rol a superadmin si no eres superadmin
   if (body.rol === "superadmin" && rol !== "superadmin") {
     return NextResponse.json({ error: "Sin permisos" }, { status: 403 });
   }
@@ -30,10 +29,11 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(body.nombre !== undefined && { nombre: body.nombre }),
       ...(body.rol    !== undefined && { rol:    body.rol }),
       ...(body.activo !== undefined && { activo: body.activo }),
+      ...(body.dni    !== undefined && { dni:    body.dni || null }),
     },
     select: {
       id: true, nombre: true, email: true,
-      rol: true, activo: true, createdAt: true,
+      dni: true, rol: true, activo: true, createdAt: true,
     },
   });
 
