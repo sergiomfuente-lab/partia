@@ -52,6 +52,7 @@ model Usuario {
   empresaActiva       Empresa?  @relation("UsuarioEmpresaActiva", fields: [empresaActivaId], references: [id])
   createdAt           DateTime  @default(now())
   clientes            Cliente[]
+  dni                 String?
 }
 
 model ContadorFactura {
