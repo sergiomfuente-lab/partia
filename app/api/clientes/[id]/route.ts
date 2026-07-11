@@ -7,7 +7,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
-  const { id } = await params;
+  const { id }    = await params;
 
   const cliente = await prisma.cliente.findFirst({
     where: { id, empresaId },
@@ -39,18 +39,19 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const updated = await prisma.cliente.update({
     where: { id },
     data: {
-      ...(body.nombre              !== undefined && { nombre: body.nombre }),
-      ...(body.razonSocial         !== undefined && { razonSocial: body.razonSocial }),
-      ...(body.cif                 !== undefined && { cif: body.cif }),
-      ...(body.direccionFacturacion!== undefined && { direccionFacturacion: body.direccionFacturacion }),
-      ...(body.formaPago           !== undefined && { formaPago: body.formaPago }),
-      ...(body.email               !== undefined && { email: body.email }),
-      ...(body.telefono            !== undefined && { telefono: body.telefono }),
-      ...(body.tipo                !== undefined && { tipo: body.tipo }),
-      ...(body.observaciones       !== undefined && { observaciones: body.observaciones }),
-      ...(body.activo              !== undefined && { activo: body.activo }),
-      ...(body.precioHoraEspecial  !== undefined && { precioHoraEspecial:  body.precioHoraEspecial  ? parseFloat(body.precioHoraEspecial)  : null }),
-      ...(body.precioPorKmEspecial !== undefined && { precioPorKmEspecial: body.precioPorKmEspecial ? parseFloat(body.precioPorKmEspecial) : null }),
+      ...(body.nombre               !== undefined && { nombre:               body.nombre }),
+      ...(body.razonSocial          !== undefined && { razonSocial:          body.razonSocial }),
+      ...(body.cif                  !== undefined && { cif:                  body.cif }),
+      ...(body.direccionFacturacion !== undefined && { direccionFacturacion: body.direccionFacturacion }),
+      ...(body.formaPago            !== undefined && { formaPago:            body.formaPago }),
+      ...(body.email                !== undefined && { email:                body.email }),
+      ...(body.telefono             !== undefined && { telefono:             body.telefono }),
+      ...(body.tipo                 !== undefined && { tipo:                 body.tipo }),
+      ...(body.observaciones        !== undefined && { observaciones:        body.observaciones }),
+      ...(body.activo               !== undefined && { activo:               body.activo }),
+      ...(body.mostrarPrecios       !== undefined && { mostrarPrecios:       body.mostrarPrecios }),
+      ...(body.precioHoraEspecial   !== undefined && { precioHoraEspecial:   body.precioHoraEspecial  ? parseFloat(body.precioHoraEspecial)  : null }),
+      ...(body.precioPorKmEspecial  !== undefined && { precioPorKmEspecial:  body.precioPorKmEspecial ? parseFloat(body.precioPorKmEspecial) : null }),
     },
   });
 

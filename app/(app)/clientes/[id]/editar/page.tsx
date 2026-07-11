@@ -7,10 +7,11 @@ export default async function EditarClientePage({ params }: { params: Promise<{ 
   const session = await auth();
   if (!session) redirect("/login");
 
-  const { id } = await params;
+  const empresaId = (session.user as any).empresaId;
+  const { id }    = await params;
 
   const cliente = await prisma.cliente.findFirst({
-    where: { id },
+    where: { id, empresaId },
   });
 
   if (!cliente) redirect("/clientes");
