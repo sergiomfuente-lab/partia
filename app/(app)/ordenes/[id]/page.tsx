@@ -1,7 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import OrdenDetalle from "./OrdenDetalle";
+import OrdenDetalle from "../OrdenDetalle";
 
 export const metadata = { title: "Orden — Partia" };
 

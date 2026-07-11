@@ -195,11 +195,11 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
           >
             <PenLine size={15} />
             {firmadoOk ? "Ver / editar firma" : "Añadir firma"}
-          </button>
-          <a href={`/api/ordenes/${orden.id}/pdf`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
+          </button> 
+        <a href={`/api/ordenes/${orden.id}/pdf`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors cursor-pointer">
             <Download size={15} />
             Descargar PDF
-          </a>
+        </a>
           <Link
             href={`/ordenes/${orden.id}/editar`}
             className="flex items-center gap-2 border border-gray-200 rounded-lg px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 transition-colors"
