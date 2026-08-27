@@ -7,10 +7,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { id }    = await params;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { empresaId } },
+    where: { id, empresaId },
     include: {
       cliente:         true,
       maquina:         true,
@@ -30,6 +31,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { id }    = await params;
   const body      = await req.json();
   const {
@@ -40,7 +42,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   } = body;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { empresaId } },
+    where: { id, empresaId },
   });
   if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 
@@ -108,10 +110,11 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { id }    = await params;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { empresaId } },
+    where: { id, empresaId },
   });
   if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 

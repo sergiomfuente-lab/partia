@@ -160,9 +160,9 @@ model TipoServicio {
 
 model Orden {
   id                  String            @id @default(cuid())
-  numero              String            @unique
-  empresaId           String?
-  empresa             Empresa?          @relation(fields: [empresaId], references: [id])
+  numero              String
+  empresaId           String
+  empresa             Empresa           @relation(fields: [empresaId], references: [id])
   fecha               DateTime          @default(now())
   direccionReparacion String?
   trabajosRealizados  String?
@@ -186,6 +186,8 @@ model Orden {
   lineasCompra        CompraLinea[]
   movimientosStock    MovimientoStock[]
   createdAt           DateTime          @default(now())
+
+  @@unique([empresaId, numero])
 }
 
 model Servicio {

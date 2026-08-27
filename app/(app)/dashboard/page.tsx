@@ -15,9 +15,9 @@ export default async function DashboardPage() {
   const [totalClientes, totalMaquinas, totalOrdenes, ultimasOrdenes] = await Promise.all([
     prisma.cliente.count({ where: { empresaId } }),
     prisma.maquina.count({ where: { cliente: { empresaId } } }),
-    prisma.orden.count({ where: { cliente: { empresaId } } }),
+    prisma.orden.count({ where: { empresaId } }),
     prisma.orden.findMany({
-      where:   { cliente: { empresaId } },
+      where:   { empresaId },
       include: { maquina: true, cliente: true },
       orderBy: { createdAt: "desc" },
       take: 5,

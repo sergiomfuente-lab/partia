@@ -14,7 +14,7 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
 
   const [orden, tiposServicio, empresa] = await Promise.all([
     prisma.orden.findFirst({
-      where: { id, cliente: { empresaId } },
+      where: { id, empresaId },
       include: {
         cliente: {
           select: {

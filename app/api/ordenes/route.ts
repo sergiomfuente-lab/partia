@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const clienteId = searchParams.get("clienteId");
   const maquinaId = searchParams.get("maquinaId");
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
   const {
     clienteId, maquinaId, fecha,

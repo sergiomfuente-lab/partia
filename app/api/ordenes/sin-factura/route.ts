@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const clienteId = searchParams.get("clienteId");
 
@@ -15,7 +16,7 @@ export async function GET(req: NextRequest) {
   const ordenes = await prisma.orden.findMany({
     where: {
       clienteId,
-      cliente:   { empresaId },
+      empresaId,
       facturaId: null,
       estado:    "completado",
     },

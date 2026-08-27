@@ -13,7 +13,7 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
   const empresaId = (session.user as any).empresaId;
 
   const orden = await prisma.orden.findFirst({
-    where: { id, cliente: { empresaId } },
+    where: { id, empresaId },
     include: {
       cliente:  true,
       maquina:  true,

@@ -7,11 +7,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { id }    = await params;
 
   const [orden, empresa, tecnico] = await Promise.all([
     prisma.orden.findFirst({
-      where: { id, cliente: { empresaId } },
+      where: { id, empresaId },
       include: {
         cliente:         true,
         maquina:         true,
