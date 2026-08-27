@@ -10,10 +10,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id }    = await params;
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
 
   const [factura, empresa] = await Promise.all([
     prisma.factura.findFirst({
-      where: { id, cliente: { empresaId } },
+      where: { id, empresaId },
       include: {
         cliente: true,
         ordenes: {
@@ -52,11 +53,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   const { id }    = await params;
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
   const { estado, vencimiento, notas, tipoDescuento, descuentoValor } = body;
 
   const factura = await prisma.factura.findFirst({
-    where: { id, cliente: { empresaId } },
+    where: { id, empresaId },
   });
   if (!factura) {
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });

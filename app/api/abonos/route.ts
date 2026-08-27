@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const facturaId = searchParams.get("facturaId");
 
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
   const { facturaId, serieId, tipo, motivo, lineas, fecha } = body;
 
@@ -40,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   // Verificar factura
   const factura = await prisma.factura.findFirst({
-    where: { id: facturaId, cliente: { empresaId } },
+    where: { id: facturaId, empresaId },
   });
   if (!factura) return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
 

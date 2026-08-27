@@ -14,7 +14,7 @@ export default async function NuevoAbonoPage({ params }: { params: Promise<{ id:
 
   const [factura, series] = await Promise.all([
     prisma.factura.findFirst({
-      where: { id, cliente: { empresaId } },
+      where: { id, empresaId },
       include: {
         cliente:        true,
         lineasDirectas: true,

@@ -38,6 +38,7 @@ model Empresa {
   presupuestos     Presupuesto[]
   series           SerieFacturacion[]
   abonos           Abono[]
+  facturas         Factura[]
 }
 
 model Usuario {
@@ -230,7 +231,9 @@ model Repuesto {
 
 model Factura {
   id             String           @id @default(cuid())
-  numero         String           @unique
+  numero         String
+  empresaId      String
+  empresa        Empresa          @relation(fields: [empresaId], references: [id])
   fecha          DateTime         @default(now())
   vencimiento    DateTime?
   estado         String           @default("pendiente")
@@ -250,6 +253,8 @@ model Factura {
   lineasDirectas FacturaLinea[]
   abonos         Abono[]
   createdAt      DateTime         @default(now())
+
+  @@unique([empresaId, numero])
 }
 
 model FacturaLinea {
@@ -268,7 +273,7 @@ model FacturaLinea {
 
 model Abono {
   id            String           @id @default(cuid())
-  numero        String           @unique
+  numero        String
   fecha         DateTime         @default(now())
   facturaId     String
   factura       Factura          @relation(fields: [facturaId], references: [id])
@@ -283,6 +288,8 @@ model Abono {
   empresa       Empresa          @relation(fields: [empresaId], references: [id])
   lineas        AbonoLinea[]
   createdAt     DateTime         @default(now())
+
+  @@unique([empresaId, numero])
 }
 
 model AbonoLinea {
@@ -297,7 +304,7 @@ model AbonoLinea {
 
 model Presupuesto {
   id                  String          @id @default(cuid())
-  numero              String          @unique
+  numero              String
   fecha               DateTime        @default(now())
   validezHasta        DateTime?
   estado              String          @default("borrador")
@@ -321,6 +328,8 @@ model Presupuesto {
   serviciosLibres     ServicioLibre[]
   repuestos           Repuesto[]
   createdAt           DateTime        @default(now())
+
+  @@unique([empresaId, numero])
 }
 
 model Proveedor {

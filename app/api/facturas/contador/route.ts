@@ -9,6 +9,7 @@ export async function GET() {
   }
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const anio      = new Date().getFullYear();
 
   const contador = await prisma.contadorFactura.findUnique({
@@ -25,6 +26,7 @@ export async function PUT(req: NextRequest) {
   }
 
   const empresaId     = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body          = await req.json();
   const { anio, contador } = body;
 

@@ -7,6 +7,7 @@ export async function GET(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { searchParams } = new URL(req.url);
   const clienteId = searchParams.get("clienteId");
   const estado    = searchParams.get("estado");
@@ -14,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const facturas = await prisma.factura.findMany({
     where: {
-      cliente: { empresaId },
+      empresaId,
       ...(clienteId && { clienteId }),
       ...(estado    && { estado }),
       ...(q && { OR: [{ numero: { contains: q, mode: "insensitive" } }] }),
@@ -36,6 +37,7 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
   const {
     clienteId, serieId, fecha, vencimiento,
@@ -104,7 +106,7 @@ export async function POST(req: NextRequest) {
 
     const factura = await prisma.factura.create({
       data: {
-        numero, clienteId,
+        numero, clienteId, empresaId,
         serieId:        serieId ?? null,
         fecha:          fechaFactura,
         vencimiento:    vencimiento ? new Date(vencimiento) : null,
@@ -182,7 +184,7 @@ export async function POST(req: NextRequest) {
 
     const factura = await prisma.factura.create({
       data: {
-        numero, clienteId,
+        numero, clienteId, empresaId,
         serieId:        serieId ?? null,
         fecha:          fechaFactura,
         vencimiento:    vencimiento ? new Date(vencimiento) : null,
