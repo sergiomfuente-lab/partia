@@ -636,6 +636,68 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
             </div>
           )}
 
+          {/* Historial de tiempo trabajado */}
+          {orden.sesionesTrabajo?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                <Clock size={15} className="text-blue-500" />
+                <h3 className="text-sm font-semibold text-gray-700">Historial de tiempo trabajado</h3>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {orden.sesionesTrabajo.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-12 px-5 py-2 bg-gray-50 border-b border-gray-100">
+                <div className="col-span-4 text-xs text-gray-400 uppercase tracking-wide">Inicio</div>
+                <div className="col-span-4 text-xs text-gray-400 uppercase tracking-wide">Fin</div>
+                <div className="col-span-4 text-xs text-gray-400 uppercase tracking-wide text-right">Duración</div>
+              </div>
+              {orden.sesionesTrabajo.map((s: any) => {
+                const inicio = new Date(s.inicio);
+                const fin    = s.fin ? new Date(s.fin) : null;
+                const formatear = (d: Date) =>
+                  d.toLocaleString("es-ES", {
+                    day: "2-digit", month: "2-digit", year: "numeric",
+                    hour: "2-digit", minute: "2-digit",
+                  });
+                const duracionHoras = fin ? (fin.getTime() - inicio.getTime()) / 3_600_000 : null;
+                const formatearDuracion = (horas: number) => {
+                  const totalMin = Math.round(horas * 60);
+                  const h = Math.floor(totalMin / 60);
+                  const m = totalMin % 60;
+                  if (h === 0) return `${m} min`;
+                  if (m === 0) return `${h}h`;
+                  return `${h}h ${m}min`;
+                };
+                return (
+                  <div key={s.id} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center">
+                    <div className="col-span-4 text-sm text-gray-700">{formatear(inicio)}</div>
+                    <div className="col-span-4 text-sm text-gray-700">
+                      {fin ? formatear(fin) : (
+                        <span className="inline-flex items-center gap-1 text-blue-600 font-medium">
+                          <PlayCircle size={12} /> En curso
+                        </span>
+                      )}
+                    </div>
+                    <div className="col-span-4 text-sm font-semibold text-gray-800 text-right">
+                      {duracionHoras !== null ? formatearDuracion(duracionHoras) : "—"}
+                    </div>
+                  </div>
+                );
+              })}
+              <div className="flex justify-end px-5 py-3 bg-gray-50">
+                <span className="text-xs text-gray-500 mr-3">Total tiempo trabajado</span>
+                <span className="text-sm font-bold text-gray-800">
+                  {(() => {
+                    const totalMin = Math.round((orden.horasTrabajo ?? 0) * 60);
+                    const h = Math.floor(totalMin / 60);
+                    const m = totalMin % 60;
+                    return h === 0 ? `${m} min` : m === 0 ? `${h}h` : `${h}h ${m}min`;
+                  })()}
+                </span>
+              </div>
+            </div>
+          )}
+
           {/* Total */}
           <div className="bg-[#0B1120] rounded-xl p-5">
             <div className="space-y-2 mb-4">
