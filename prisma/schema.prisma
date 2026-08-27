@@ -56,6 +56,7 @@ model Usuario {
   createdAt           DateTime  @default(now())
   clientes            Cliente[]
   dni                 String?
+  ordenesAsignadas    Orden[]
 }
 
 model ContadorFactura {
@@ -177,6 +178,10 @@ model Orden {
   cliente             Cliente           @relation(fields: [clienteId], references: [id])
   maquinaId           String
   maquina             Maquina           @relation(fields: [maquinaId], references: [id])
+  tecnicoId           String?
+  tecnico             Usuario?          @relation(fields: [tecnicoId], references: [id])
+  horasTrabajo        Float             @default(0)
+  sesionesTrabajo     SesionTrabajo[]
   servicios           Servicio[]
   serviciosLibres     ServicioLibre[]
   repuestos           Repuesto[]
@@ -189,6 +194,18 @@ model Orden {
   createdAt           DateTime          @default(now())
 
   @@unique([empresaId, numero])
+}
+
+// Registra cada tramo de trabajo real sobre una orden (desde que el
+// tecnico pulsa "empezar"/"reanudar" hasta que pausa o completa). Sirve
+// para calcular Orden.horasTrabajo y para tener un historial auditable.
+model SesionTrabajo {
+  id        String    @id @default(cuid())
+  ordenId   String
+  orden     Orden     @relation(fields: [ordenId], references: [id])
+  inicio    DateTime  @default(now())
+  fin       DateTime?
+  createdAt DateTime  @default(now())
 }
 
 model Servicio {

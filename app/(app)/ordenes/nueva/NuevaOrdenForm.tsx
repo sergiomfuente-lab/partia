@@ -29,6 +29,11 @@ type TipoServicio = {
   unidad: string;
 };
 
+type Tecnico = {
+  id: string;
+  nombre: string;
+};
+
 type LineaEstandar = {
   _key:           string;
   fecha:          string;
@@ -60,11 +65,13 @@ const uid = () => Math.random().toString(36).slice(2, 9);
 export default function NuevaOrdenForm({
   clientes,
   tiposServicio,
+  tecnicos,
   precioHoraDefault,
   precioPorKmDefault,
 }: {
   clientes:           Cliente[];
   tiposServicio:      TipoServicio[];
+  tecnicos:           Tecnico[];
   precioHoraDefault:  number;
   precioPorKmDefault: number;
 }) {
@@ -81,6 +88,7 @@ export default function NuevaOrdenForm({
   const [form, setForm] = useState({
     clienteId:           clienteIdParam,
     maquinaId:           maquinaIdParam,
+    tecnicoId:           "",
     fecha:               hoy(),
     direccionReparacion: "",
     trabajosRealizados:  "",
@@ -299,6 +307,20 @@ export default function NuevaOrdenForm({
                       <option key={m.id} value={m.id}>
                         {m.marca} {m.modelo} — {m.numeroDeSerie} ({m.horasActuales}h)
                       </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Técnico asignado
+                  </label>
+                  <select value={form.tecnicoId}
+                    onChange={(e) => setField("tecnicoId", e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
+                    <option value="">Sin asignar</option>
+                    {tecnicos.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nombre}</option>
                     ))}
                   </select>
                 </div>

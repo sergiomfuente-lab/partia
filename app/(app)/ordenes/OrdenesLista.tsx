@@ -23,6 +23,7 @@ type Cliente = { id: string; nombre: string };
 const ESTADO_CONFIG: Record<string, { label: string; className: string }> = {
   pendiente:  { label: "Pendiente",  className: "bg-yellow-50 text-yellow-700" },
   en_curso:   { label: "En curso",   className: "bg-blue-50 text-blue-700" },
+  pausado:    { label: "Pausada",    className: "bg-orange-50 text-orange-700" },
   completado: { label: "Completado", className: "bg-green-50 text-green-700" },
 };
 
@@ -96,6 +97,7 @@ export default function OrdenesLista({ clientes }: { clientes: Cliente[] }) {
             { value: "",           label: "Todas" },
             { value: "pendiente",  label: "Pendientes" },
             { value: "en_curso",   label: "En curso" },
+            { value: "pausado",    label: "Pausadas" },
             { value: "completado", label: "Completadas" },
           ].map((f) => (
             <button

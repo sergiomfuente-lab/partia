@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { useEffect } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   LayoutDashboard, Users, Wrench,
@@ -23,6 +24,21 @@ const ROL_LABELS: Record<string, string> = {
 
 export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
   const pathname = usePathname();
+  const router   = useRouter();
+
+  // Si un tecnico esta viendo el panel de oficina en una pantalla estrecha
+  // (movil real cuyo user-agent no matcheo la deteccion del servidor, o
+  // ventana del navegador estrechada durante pruebas en desarrollo), lo
+  // mandamos a la seccion movil de todas formas.
+  useEffect(() => {
+    if (rol !== "tecnico") return;
+    const comprobarAncho = () => {
+      if (window.innerWidth < 768) router.replace("/tecnico");
+    };
+    comprobarAncho();
+    window.addEventListener("resize", comprobarAncho);
+    return () => window.removeEventListener("resize", comprobarAncho);
+  }, [rol, router]);
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";

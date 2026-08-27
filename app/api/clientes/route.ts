@@ -57,8 +57,11 @@ export async function POST(req: NextRequest) {
     observaciones, precioHoraEspecial, precioPorKmEspecial,
   } = body;
 
-  if (!nombre || !cif) {
-    return NextResponse.json({ error: "Nombre y CIF son obligatorios" }, { status: 400 });
+  // El CIF es obligatorio en el formulario de oficina (validacion HTML alli),
+  // pero se permite crear clientes sin CIF desde la app del tecnico (llamada
+  // de un cliente nuevo sobre la marcha, sin todos los datos fiscales a mano).
+  if (!nombre) {
+    return NextResponse.json({ error: "El nombre es obligatorio" }, { status: 400 });
   }
 
   const cliente = await prisma.cliente.create({

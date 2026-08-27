@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 
 type TipoServicio = { id: string; nombre: string; unidad: string };
+type Tecnico = { id: string; nombre: string };
 
 type LineaEstandar = {
   _key:           string;
@@ -41,11 +42,13 @@ const toDateInput = (d: string) => new Date(d).toISOString().split("T")[0];
 export default function EditarOrdenForm({
   orden,
   tiposServicio,
+  tecnicos,
   precioHoraDefault,
   precioPorKmDefault,
 }: {
   orden:              any;
   tiposServicio:      TipoServicio[];
+  tecnicos:           Tecnico[];
   precioHoraDefault:  number;
   precioPorKmDefault: number;
 }) {
@@ -61,6 +64,7 @@ export default function EditarOrdenForm({
     direccionReparacion: orden.direccionReparacion ?? "",
     trabajosRealizados:  orden.trabajosRealizados  ?? "",
     observaciones:       orden.observaciones       ?? "",
+    tecnicoId:           orden.tecnicoId            ?? "",
   });
 
   // Separar servicios estándar (tienen tipoServicioId) de libres
@@ -270,6 +274,20 @@ export default function EditarOrdenForm({
                       {orden.maquina.marca} {orden.maquina.modelo}
                     </div>
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Técnico asignado
+                  </label>
+                  <select value={form.tecnicoId}
+                    onChange={(e) => setField("tecnicoId", e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
+                    <option value="">Sin asignar</option>
+                    {tecnicos.map((t) => (
+                      <option key={t.id} value={t.id}>{t.nombre}</option>
+                    ))}
+                  </select>
                 </div>
 
                 <div>

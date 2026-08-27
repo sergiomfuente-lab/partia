@@ -11,7 +11,7 @@ export default async function NuevaOrdenPage() {
 
   const empresaId = (session.user as any).empresaId;
 
-  const [clientes, tiposServicio, empresa] = await Promise.all([
+  const [clientes, tiposServicio, empresa, tecnicos] = await Promise.all([
     prisma.cliente.findMany({
       where:   { empresaId, activo: true },
       select: {
@@ -29,12 +29,18 @@ export default async function NuevaOrdenPage() {
       where:  { id: empresaId },
       select: { precioHora: true, precioPorKm: true },
     }),
+    prisma.usuario.findMany({
+      where:   { empresaId, rol: "tecnico", activo: true },
+      select:  { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
   ]);
 
   return (
     <NuevaOrdenForm
       clientes={clientes}
       tiposServicio={tiposServicio}
+      tecnicos={tecnicos}
       precioHoraDefault={empresa?.precioHora   ?? 55}
       precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
     />

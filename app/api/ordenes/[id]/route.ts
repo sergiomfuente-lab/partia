@@ -15,6 +15,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     include: {
       cliente:         true,
       maquina:         true,
+      tecnico:         { select: { id: true, nombre: true } },
       servicios:       { include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
       serviciosLibres: true,
       repuestos:       true,
@@ -38,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     fecha, direccionReparacion, trabajosRealizados,
     observaciones, estado, servicios, serviciosLibres, repuestos,
     firmaDni, firmaObservaciones, firmaBase64,
-    mostrarPrecios,
+    mostrarPrecios, tecnicoId,
   } = body;
 
   const orden = await prisma.orden.findFirst({
@@ -46,60 +47,93 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   });
   if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
 
-  const updated = await prisma.orden.update({
-    where: { id },
-    data: {
-      ...(fecha               !== undefined && { fecha:               new Date(fecha) }),
-      ...(direccionReparacion !== undefined && { direccionReparacion }),
-      ...(trabajosRealizados  !== undefined && { trabajosRealizados }),
-      ...(observaciones       !== undefined && { observaciones }),
-      ...(estado              !== undefined && { estado }),
-      ...(mostrarPrecios      !== undefined && { mostrarPrecios }),
-      ...(firmaDni            !== undefined && { firmaDni }),
-      ...(firmaObservaciones  !== undefined && { firmaObservaciones }),
-      ...(firmaBase64         !== undefined && { firmaBase64 }),
-      ...(servicios !== undefined && {
-        servicios: {
-          deleteMany: {},
-          create: servicios.map((s: any) => ({
-            fecha:          s.fecha ? new Date(s.fecha) : new Date(),
-            tipoServicioId: s.tipoServicioId,
-            cantidad:       s.cantidad,
-            precio:         s.precio,
-            descripcion:    s.descripcion ?? null,
-          })),
-        },
-      }),
-      ...(serviciosLibres !== undefined && {
-        serviciosLibres: {
-          deleteMany: {},
-          create: serviciosLibres.map((s: any) => ({
-            descripcion: s.descripcion,
-            cantidad:    s.cantidad,
-            precio:      s.precio,
-          })),
-        },
-      }),
-      ...(repuestos !== undefined && {
-        repuestos: {
-          deleteMany: {},
-          create: repuestos.map((r: any) => ({
-            referencia:  r.referencia  ?? null,
-            descripcion: r.descripcion,
-            cantidad:    r.cantidad,
-            precioCoste: r.precioCoste,
-            precioVenta: r.precioVenta,
-          })),
-        },
-      }),
-    },
-    include: {
-      cliente:         { select: { id: true, nombre: true } },
-      maquina:         { select: { id: true, marca: true, modelo: true } },
-      servicios:       { include: { tipoServicio: true } },
-      serviciosLibres: true,
-      repuestos:       true,
-    },
+  // Registro de tiempo de trabajo real: cualquier transicion que ENTRA en
+  // "en_curso" (empezar o reanudar tras una pausa) abre una sesion nueva;
+  // cualquier transicion que SALE de "en_curso" (pausar, completar,
+  // cancelar) cierra la sesion abierta y suma sus horas a Orden.horasTrabajo.
+  const entrandoEnCurso   = estado !== undefined && estado === "en_curso" && orden.estado !== "en_curso";
+  const saliendoDeEnCurso = estado !== undefined && estado !== "en_curso" && orden.estado === "en_curso";
+
+  const updated = await prisma.$transaction(async (tx) => {
+    let incrementoHoras = 0;
+
+    if (saliendoDeEnCurso) {
+      const sesionAbierta = await tx.sesionTrabajo.findFirst({
+        where:   { ordenId: id, fin: null },
+        orderBy: { inicio: "desc" },
+      });
+      if (sesionAbierta) {
+        const fin = new Date();
+        incrementoHoras = (fin.getTime() - sesionAbierta.inicio.getTime()) / 3_600_000;
+        await tx.sesionTrabajo.update({ where: { id: sesionAbierta.id }, data: { fin } });
+      }
+    }
+
+    if (entrandoEnCurso) {
+      const sesionColgada = await tx.sesionTrabajo.findFirst({ where: { ordenId: id, fin: null } });
+      if (!sesionColgada) {
+        await tx.sesionTrabajo.create({ data: { ordenId: id, inicio: new Date() } });
+      }
+    }
+
+    return tx.orden.update({
+      where: { id },
+      data: {
+        ...(fecha               !== undefined && { fecha:               new Date(fecha) }),
+        ...(direccionReparacion !== undefined && { direccionReparacion }),
+        ...(trabajosRealizados  !== undefined && { trabajosRealizados }),
+        ...(observaciones       !== undefined && { observaciones }),
+        ...(estado              !== undefined && { estado }),
+        ...(tecnicoId           !== undefined && { tecnicoId: tecnicoId || null }),
+        ...(mostrarPrecios      !== undefined && { mostrarPrecios }),
+        ...(firmaDni            !== undefined && { firmaDni }),
+        ...(firmaObservaciones  !== undefined && { firmaObservaciones }),
+        ...(firmaBase64         !== undefined && { firmaBase64 }),
+        ...(incrementoHoras > 0 && { horasTrabajo: { increment: incrementoHoras } }),
+        ...(servicios !== undefined && {
+          servicios: {
+            deleteMany: {},
+            create: servicios.map((s: any) => ({
+              fecha:          s.fecha ? new Date(s.fecha) : new Date(),
+              tipoServicioId: s.tipoServicioId,
+              cantidad:       s.cantidad,
+              precio:         s.precio,
+              descripcion:    s.descripcion ?? null,
+            })),
+          },
+        }),
+        ...(serviciosLibres !== undefined && {
+          serviciosLibres: {
+            deleteMany: {},
+            create: serviciosLibres.map((s: any) => ({
+              descripcion: s.descripcion,
+              cantidad:    s.cantidad,
+              precio:      s.precio,
+            })),
+          },
+        }),
+        ...(repuestos !== undefined && {
+          repuestos: {
+            deleteMany: {},
+            create: repuestos.map((r: any) => ({
+              referencia:  r.referencia  ?? null,
+              descripcion: r.descripcion,
+              cantidad:    r.cantidad,
+              precioCoste: r.precioCoste,
+              precioVenta: r.precioVenta,
+            })),
+          },
+        }),
+      },
+      include: {
+        cliente:         { select: { id: true, nombre: true } },
+        maquina:         { select: { id: true, marca: true, modelo: true } },
+        tecnico:         { select: { id: true, nombre: true } },
+        servicios:       { include: { tipoServicio: true } },
+        serviciosLibres: true,
+        repuestos:       true,
+      },
+    });
   });
 
   return NextResponse.json(updated);
@@ -121,6 +155,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
   await prisma.servicio.deleteMany({ where: { ordenId: id } });
   await prisma.servicioLibre.deleteMany({ where: { ordenId: id } });
   await prisma.repuesto.deleteMany({ where: { ordenId: id } });
+  await prisma.sesionTrabajo.deleteMany({ where: { ordenId: id } });
   await prisma.orden.delete({ where: { id } });
 
   return NextResponse.json({ ok: true });

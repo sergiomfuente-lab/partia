@@ -1,5 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
 import { prisma } from "@/lib/prisma";
 import Sidebar from "@/components/Sidebar";
 
@@ -18,6 +19,12 @@ export default async function AppLayout({ children }: { children: React.ReactNod
   });
 
   if (usuario?.debeCambiarPassword) redirect("/cambiar-password");
+
+  // Tecnicos entrando desde el movil van a la seccion movil de tecnico,
+  // no al panel de oficina (que no esta pensado para pantallas pequenas).
+  const hdrs     = await headers();
+  const esMovil  = hdrs.get("x-is-mobile") === "1";
+  if (esMovil && usuario?.rol === "tecnico") redirect("/tecnico");
 
   // Para superadmin usar empresaActivaId
   const empresaId = usuario?.rol === "superadmin"

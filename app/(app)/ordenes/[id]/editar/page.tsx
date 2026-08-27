@@ -12,7 +12,7 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
   const { id }      = await params;
   const empresaId   = (session.user as any).empresaId;
 
-  const [orden, tiposServicio, empresa] = await Promise.all([
+  const [orden, tiposServicio, empresa, tecnicos] = await Promise.all([
     prisma.orden.findFirst({
       where: { id, empresaId },
       include: {
@@ -36,6 +36,11 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
       where:  { id: empresaId },
       select: { precioHora: true, precioPorKm: true },
     }),
+    prisma.usuario.findMany({
+      where:   { empresaId, rol: "tecnico", activo: true },
+      select:  { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
   ]);
 
   if (!orden) redirect("/ordenes");
@@ -44,6 +49,7 @@ export default async function EditarOrdenPage({ params }: { params: Promise<{ id
     <EditarOrdenForm
       orden={JSON.parse(JSON.stringify(orden))}
       tiposServicio={tiposServicio}
+      tecnicos={tecnicos}
       precioHoraDefault={empresa?.precioHora   ?? 55}
       precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
     />

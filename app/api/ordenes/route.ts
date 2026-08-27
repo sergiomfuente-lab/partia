@@ -13,6 +13,7 @@ export async function GET(req: NextRequest) {
   const maquinaId = searchParams.get("maquinaId");
   const estado    = searchParams.get("estado");
   const q         = searchParams.get("q");
+  const tecnicoId = searchParams.get("tecnicoId");
 
   const ordenes = await prisma.orden.findMany({
     where: {
@@ -20,6 +21,7 @@ export async function GET(req: NextRequest) {
       ...(clienteId && { clienteId }),
       ...(maquinaId && { maquinaId }),
       ...(estado    && { estado }),
+      ...(tecnicoId && { tecnicoId }),
       ...(q && {
         OR: [
           { numero:              { contains: q, mode: "insensitive" } },
@@ -31,6 +33,7 @@ export async function GET(req: NextRequest) {
     include: {
       cliente:         { select: { id: true, nombre: true } },
       maquina:         { select: { id: true, marca: true, modelo: true } },
+      tecnico:         { select: { id: true, nombre: true } },
       servicios:       { include: { tipoServicio: true } },
       serviciosLibres: true,
       _count:          { select: { repuestos: true, servicios: true } },
@@ -49,7 +52,7 @@ export async function POST(req: NextRequest) {
   if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
   const {
-    clienteId, maquinaId, fecha,
+    clienteId, maquinaId, tecnicoId, fecha,
     direccionReparacion, trabajosRealizados, observaciones,
     servicios, serviciosLibres, repuestos,
   } = body;
@@ -78,6 +81,7 @@ export async function POST(req: NextRequest) {
         empresaId,
         clienteId,
         maquinaId,
+        tecnicoId:           tecnicoId || null,
         fecha:               fecha ? new Date(fecha) : new Date(),
         direccionReparacion: direccionReparacion ?? null,
         trabajosRealizados:  trabajosRealizados  ?? null,

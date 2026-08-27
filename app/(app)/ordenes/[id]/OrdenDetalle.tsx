@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   ArrowLeft, ClipboardList, Pencil, Download,
-  CheckCircle2, Clock, AlertCircle, PlayCircle,
+  CheckCircle2, Clock, AlertCircle, PlayCircle, PauseCircle,
   Building2, Calendar, Wrench, Package,
   FileText, PenLine, Trash2,
 } from "lucide-react";
@@ -13,8 +13,18 @@ import {
 const ESTADO_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   pendiente:  { label: "Pendiente",  className: "bg-yellow-50 text-yellow-700 border border-yellow-200", icon: <Clock size={13} /> },
   en_curso:   { label: "En curso",   className: "bg-blue-50 text-blue-700 border border-blue-200",       icon: <PlayCircle size={13} /> },
+  pausado:    { label: "Pausada",    className: "bg-orange-50 text-orange-700 border border-orange-200", icon: <PauseCircle size={13} /> },
   completado: { label: "Completado", className: "bg-green-50 text-green-700 border border-green-200",    icon: <CheckCircle2 size={13} /> },
   cancelado:  { label: "Cancelado",  className: "bg-red-50 text-red-700 border border-red-200",          icon: <AlertCircle size={13} /> },
+};
+
+const formatHoras = (horas: number) => {
+  const totalMin = Math.round((horas ?? 0) * 60);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return `${m} min`;
+  if (m === 0) return `${h}h`;
+  return `${h}h ${m}min`;
 };
 
 export default function OrdenDetalle({ orden }: { orden: any }) {
@@ -407,6 +417,14 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
                   {orden.maquina.horasActuales}h
                 </div>
               </div>
+              {orden.horasTrabajo > 0 && (
+                <div>
+                  <div className="text-xs text-gray-400 mb-0.5">Tiempo trabajado (técnico)</div>
+                  <div className="text-sm font-medium text-gray-800">
+                    {formatHoras(orden.horasTrabajo)}
+                  </div>
+                </div>
+              )}
 
               {/* Toggle mostrar precios */}
               <div className="pt-2 border-t border-gray-100">
@@ -439,7 +457,7 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
               Cambiar estado
             </div>
             <div className="space-y-2">
-              {["pendiente", "en_curso", "completado", "cancelado"].map((e) => {
+              {["pendiente", "en_curso", "pausado", "completado", "cancelado"].map((e) => {
                 const info = ESTADO_CONFIG[e];
                 return (
                   <button
