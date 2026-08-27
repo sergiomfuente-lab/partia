@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
 
   const ordenes = await prisma.orden.findMany({
     where: {
-      cliente: { empresaId },
+      empresaId,
       ...(clienteId && { clienteId }),
       ...(maquinaId && { maquinaId }),
       ...(estado    && { estado }),
@@ -59,60 +59,61 @@ export async function POST(req: NextRequest) {
   const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
   if (!cliente) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
 
-  // Generar número de orden
-  const ultima = await prisma.orden.findFirst({
-    where:   { cliente: { empresaId } },
-    orderBy: { createdAt: "desc" },
-    select:  { numero: true },
-  });
+  // Numeración atómica por empresa (evita colisiones si dos personas
+  // crean una orden a la vez, cosa que el cálculo anterior por
+  // "última orden + 1" no garantizaba).
+  const orden = await prisma.$transaction(async (tx) => {
+    const contador = await tx.contadorOrden.upsert({
+      where:  { empresaId },
+      create: { empresaId, contador: 1 },
+      update: { contador: { increment: 1 } },
+    });
+    const numero = `ORD-${String(contador.contador).padStart(5, "0")}`;
 
-  let nextNum = 1;
-  if (ultima?.numero) {
-    const match = ultima.numero.match(/(\d+)$/);
-    if (match) nextNum = parseInt(match[1]) + 1;
-  }
-  const numero = `ORD-${String(nextNum).padStart(5, "0")}`;
-
-  const orden = await prisma.orden.create({
-    data: {
-      numero, clienteId, maquinaId,
-      fecha:               fecha ? new Date(fecha) : new Date(),
-      direccionReparacion: direccionReparacion ?? null,
-      trabajosRealizados:  trabajosRealizados  ?? null,
-      observaciones:       observaciones       ?? null,
-      servicios: {
-        create: (servicios ?? []).map((s: any) => ({
-          fecha:          s.fecha ? new Date(s.fecha) : new Date(),
-          tipoServicioId: s.tipoServicioId,
-          cantidad:       s.cantidad,
-          precio:         s.precio,
-          descripcion:    s.descripcion ?? null,
-        })),
+    return tx.orden.create({
+      data: {
+        numero,
+        empresaId,
+        clienteId,
+        maquinaId,
+        fecha:               fecha ? new Date(fecha) : new Date(),
+        direccionReparacion: direccionReparacion ?? null,
+        trabajosRealizados:  trabajosRealizados  ?? null,
+        observaciones:       observaciones       ?? null,
+        servicios: {
+          create: (servicios ?? []).map((s: any) => ({
+            fecha:          s.fecha ? new Date(s.fecha) : new Date(),
+            tipoServicioId: s.tipoServicioId,
+            cantidad:       s.cantidad,
+            precio:         s.precio,
+            descripcion:    s.descripcion ?? null,
+          })),
+        },
+        serviciosLibres: {
+          create: (serviciosLibres ?? []).map((s: any) => ({
+            descripcion: s.descripcion,
+            cantidad:    s.cantidad,
+            precio:      s.precio,
+          })),
+        },
+        repuestos: {
+          create: (repuestos ?? []).map((r: any) => ({
+            referencia:  r.referencia  ?? null,
+            descripcion: r.descripcion,
+            cantidad:    r.cantidad,
+            precioCoste: r.precioCoste,
+            precioVenta: r.precioVenta,
+          })),
+        },
       },
-      serviciosLibres: {
-        create: (serviciosLibres ?? []).map((s: any) => ({
-          descripcion: s.descripcion,
-          cantidad:    s.cantidad,
-          precio:      s.precio,
-        })),
+      include: {
+        cliente:         { select: { id: true, nombre: true } },
+        maquina:         { select: { id: true, marca: true, modelo: true } },
+        servicios:       { include: { tipoServicio: true } },
+        serviciosLibres: true,
+        repuestos:       true,
       },
-      repuestos: {
-        create: (repuestos ?? []).map((r: any) => ({
-          referencia:  r.referencia  ?? null,
-          descripcion: r.descripcion,
-          cantidad:    r.cantidad,
-          precioCoste: r.precioCoste,
-          precioVenta: r.precioVenta,
-        })),
-      },
-    },
-    include: {
-      cliente:         { select: { id: true, nombre: true } },
-      maquina:         { select: { id: true, marca: true, modelo: true } },
-      servicios:       { include: { tipoServicio: true } },
-      serviciosLibres: true,
-      repuestos:       true,
-    },
+    });
   });
 
   // Actualizar horas máquina

@@ -30,6 +30,8 @@ model Empresa {
   clientes         Cliente[]
   contadores       ContadorFactura[]
   contadoresPresupuesto ContadorPresupuesto[]
+  contadoresOrden  ContadorOrden[]
+  ordenes          Orden[]
   proveedores      Proveedor[]
   productos        Producto[]
   compras          Compra[]
@@ -77,6 +79,16 @@ model ContadorPresupuesto {
   @@unique([empresaId, anio])
 }
 
+model ContadorOrden {
+  id        String   @id @default(cuid())
+  contador  Int      @default(0)
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([empresaId])
+}
+
 model SerieFacturacion {
   id             String    @id @default(cuid())
   nombre         String
@@ -97,7 +109,7 @@ model Cliente {
   id                   String        @id @default(cuid())
   nombre               String
   razonSocial          String?
-  cif                  String
+  cif                  String?
   direccionFacturacion String?
   formaPago            String?       @default("Transferencia bancaria")
   email                String?
@@ -149,6 +161,8 @@ model TipoServicio {
 model Orden {
   id                  String            @id @default(cuid())
   numero              String            @unique
+  empresaId           String?
+  empresa             Empresa?          @relation(fields: [empresaId], references: [id])
   fecha               DateTime          @default(now())
   direccionReparacion String?
   trabajosRealizados  String?
@@ -203,7 +217,7 @@ model Repuesto {
   id            String       @id @default(cuid())
   referencia    String?
   descripcion   String
-  cantidad      Int          @default(1)
+  cantidad      Float        @default(1)
   precioCoste   Float
   precioVenta   Float
   ordenId       String?
