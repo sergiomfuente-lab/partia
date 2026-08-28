@@ -2,10 +2,16 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import DashboardPanel from "./DashboardPanel";
 
 export default async function DashboardPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
+
+  const rol = (session.user as any).rol;
+  // El dashboard tiene datos de facturación y rendimiento que son de
+  // gestión; los técnicos ya tienen su propia sección en /tecnico.
+  if (rol === "tecnico") redirect("/ordenes");
 
   const empresaId = (session.user as any).empresaId;
 
@@ -49,7 +55,9 @@ export default async function DashboardPage() {
         </div>
       </div>
 
-      <div className="bg-white rounded-xl border border-gray-100 p-6">
+      <DashboardPanel />
+
+      <div className="bg-white rounded-xl border border-gray-100 p-6 mt-8">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-sm font-semibold text-gray-700">Últimas órdenes</h2>
           <Link href="/ordenes" className="text-xs text-[#00C2FF]">Ver todas →</Link>

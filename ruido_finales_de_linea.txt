@@ -7,8 +7,6 @@ app/(app)/clientes/nuevo/page.tsx
 app/(app)/clientes/page.tsx
 app/(app)/configuracion/ConfiguracionPanel.tsx
 app/(app)/configuracion/page.tsx
-app/(app)/dashboard/page.tsx
-app/(app)/facturas/FacturasLista.tsx
 app/(app)/facturas/[id]/FacturaDetalle.tsx
 app/(app)/facturas/[id]/abono/NuevoAbonoForm.tsx
 app/(app)/facturas/[id]/abono/page.tsx

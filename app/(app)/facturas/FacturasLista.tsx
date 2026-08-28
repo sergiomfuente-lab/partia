@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   Search, Plus, FileText, Building2,
@@ -39,11 +40,12 @@ export default function FacturasLista({
   clientes: Cliente[];
   series:   Serie[];
 }) {
+  const searchParams = useSearchParams();
   const [facturas, setFacturas]   = useState<Factura[]>([]);
   const [loading, setLoading]     = useState(true);
   const [q, setQ]                 = useState("");
   const [clienteId, setClienteId] = useState("");
-  const [estado, setEstado]       = useState("");
+  const [estado, setEstado]       = useState(searchParams.get("estado") ?? "");
   const [menuNueva, setMenuNueva] = useState(false);
 
   useEffect(() => {

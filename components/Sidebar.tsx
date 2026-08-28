@@ -57,7 +57,7 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
       href:  "/dashboard",
       label: "Dashboard",
       icon:  <LayoutDashboard className="w-4 h-4" />,
-      roles: ["superadmin", "administrador", "tecnico", "administrativo"],
+      roles: ["superadmin", "administrador", "administrativo"],
     },
     {
       href:  "/clientes",
