@@ -48,7 +48,6 @@ export default function TecnicoCompraForm({
   );
   const [proveedorId, setProveedorId]             = useState("");
   const [proveedorNombreLibre, setProveedorNombreLibre] = useState("");
-  const [guardarProveedor, setGuardarProveedor]   = useState(false);
 
   const [fecha, setFecha]                 = useState(hoy());
   const [numeroAlbaran, setNumeroAlbaran] = useState("");
@@ -120,23 +119,30 @@ export default function TecnicoCompraForm({
 
     const lineasValidas = lineas.filter((l) => l.descripcion.trim());
     if (!lineasValidas.length) { setError("Añade al menos un material."); return; }
+    if (modoProveedor === "nuevo" && !proveedorNombreLibre.trim()) {
+      setError("Escribe el nombre del proveedor, o elige uno de la lista.");
+      return;
+    }
 
     setGuardando(true);
     try {
-      let proveedorFinalId     = modoProveedor === "existente" ? (proveedorId || null) : null;
-      let proveedorFinalNombre = modoProveedor === "nuevo" ? (proveedorNombreLibre.trim() || null) : null;
+      let proveedorFinalId = modoProveedor === "existente" ? (proveedorId || null) : null;
 
-      if (modoProveedor === "nuevo" && guardarProveedor && proveedorFinalNombre) {
+      // Un proveedor nuevo siempre se da de alta de verdad (solo el nombre
+      // es obligatorio) para que quede en la lista de proveedores de la
+      // empresa; no se guarda nunca como texto suelto.
+      if (modoProveedor === "nuevo" && proveedorNombreLibre.trim()) {
         const resProv = await fetch("/api/proveedores", {
           method:  "POST",
           headers: { "Content-Type": "application/json" },
-          body:    JSON.stringify({ nombre: proveedorFinalNombre }),
+          body:    JSON.stringify({ nombre: proveedorNombreLibre.trim() }),
         });
-        if (resProv.ok) {
-          const nuevo = await resProv.json();
-          proveedorFinalId     = nuevo.id;
-          proveedorFinalNombre = null;
+        if (!resProv.ok) {
+          const data = await resProv.json().catch(() => ({}));
+          throw new Error(data.error ?? "No se pudo crear el proveedor.");
         }
+        const nuevo = await resProv.json();
+        proveedorFinalId = nuevo.id;
       }
 
       const res = await fetch("/api/compras", {
@@ -144,7 +150,7 @@ export default function TecnicoCompraForm({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           fecha, numeroAlbaran: numeroAlbaran || null,
-          proveedorId: proveedorFinalId, proveedorNombre: proveedorFinalNombre,
+          proveedorId: proveedorFinalId, proveedorNombre: null,
           observaciones: observaciones || null,
           fotoTicketBase64: fotoBase64 || null,
           tecnicoId,
@@ -207,7 +213,7 @@ export default function TecnicoCompraForm({
             </button>
             <button type="button" onClick={() => setModoProveedor("nuevo")}
               className={`flex-1 text-sm font-medium py-2 rounded-md transition-colors ${modoProveedor === "nuevo" ? "bg-white text-gray-900 shadow-sm" : "text-gray-500"}`}>
-              Otro
+              Nuevo proveedor
             </button>
           </div>
         )}
@@ -221,17 +227,14 @@ export default function TecnicoCompraForm({
             {proveedores.map((p) => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
         ) : (
-          <div className="space-y-2">
-            <input type="text" placeholder="Nombre de la tienda (ej. Leroy Merlin)"
+          <div className="space-y-1.5">
+            <input type="text" placeholder="Nombre de la tienda (ej. Leroy Merlin) *"
               value={proveedorNombreLibre}
               onChange={(e) => setProveedorNombreLibre(e.target.value)}
               className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg bg-white focus:outline-none focus:border-[#00C2FF]" />
-            {proveedorNombreLibre.trim() && (
-              <label className="flex items-center gap-2 text-xs text-gray-500">
-                <input type="checkbox" checked={guardarProveedor} onChange={(e) => setGuardarProveedor(e.target.checked)} />
-                Guardar en la lista de proveedores
-              </label>
-            )}
+            <p className="text-xs text-gray-400">
+              Se dará de alta como proveedor nuevo. El resto de datos (CIF, teléfono...) se pueden completar luego desde la oficina.
+            </p>
           </div>
         )}
       </div>
