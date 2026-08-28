@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, Save, User, Building2, Euro } from "lucide-react";
@@ -17,6 +17,14 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
   const [error, setError]     = useState("");
+
+  const [plazos, setPlazos] = useState<{ id: string; dias: number }[]>([]);
+
+  useEffect(() => {
+    fetch("/api/plazos-pago?activos=true").then((r) => r.json()).then((data) => {
+      if (Array.isArray(data)) setPlazos(data);
+    });
+  }, []);
 
   const [form, setForm] = useState({
     nombre:              cliente.nombre              ?? "",
@@ -223,14 +231,20 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
                     onChange={(e) => setField("plazoPagoDias", e.target.value)}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
                     <option value="">Sin definir (vencimiento manual)</option>
-                    <option value="0">Al contado</option>
-                    <option value="15">15 días</option>
-                    <option value="30">30 días</option>
-                    <option value="45">45 días</option>
-                    <option value="60">60 días</option>
-                    <option value="90">90 días</option>
+                    {plazos.map((p) => (
+                      <option key={p.id} value={p.dias}>{p.dias === 0 ? "Al contado" : `${p.dias} días`}</option>
+                    ))}
+                    {form.plazoPagoDias !== "" && !plazos.some((p) => String(p.dias) === form.plazoPagoDias) && (
+                      <option value={form.plazoPagoDias}>
+                        {form.plazoPagoDias === "0" ? "Al contado" : `${form.plazoPagoDias} días`} (ya no está en la lista de Configuración)
+                      </option>
+                    )}
                   </select>
-                  <p className="text-xs text-gray-400 mt-1">Al facturar a este cliente, la fecha de vencimiento se calculará sola.</p>
+                  <p className="text-xs text-gray-400 mt-1">
+                    {plazos.length === 0
+                      ? "Añade plazos en Configuración → Plazos de pago para poder elegirlos aquí."
+                      : "Al facturar a este cliente, la fecha de vencimiento se calculará sola."}
+                  </p>
                 </div>
 
                 <div>

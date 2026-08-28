@@ -48,6 +48,7 @@ model Empresa {
   verifactuFechaLimite       DateTime?
   verifactuNotasGestoria     String?
   ultimaHuellaFactura        String?
+  plazosPago                 PlazoPago[]
 }
 
 model Usuario {
@@ -68,6 +69,17 @@ model Usuario {
   ordenesAsignadas    Orden[]
   comprasRegistradas  Compra[]
   facturasPagadas     Factura[]
+}
+
+model PlazoPago {
+  id        String   @id @default(cuid())
+  dias      Int
+  activo    Boolean  @default(true)
+  empresaId String
+  empresa   Empresa  @relation(fields: [empresaId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([empresaId, dias])
 }
 
 model ContadorFactura {

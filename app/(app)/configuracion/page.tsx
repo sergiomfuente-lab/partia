@@ -11,7 +11,7 @@ export default async function ConfiguracionPage() {
 
   const empresaId = (session.user as any).empresaId;
 
-  const [usuario, tiposServicio, empresa, contador, series] = await Promise.all([
+  const [usuario, tiposServicio, empresa, contador, series, plazosPago] = await Promise.all([
     prisma.usuario.findUnique({
       where:  { id: session.user.id },
       select: { id: true, nombre: true, email: true },
@@ -42,6 +42,10 @@ export default async function ConfiguracionPage() {
       where:   { empresaId },
       orderBy: { createdAt: "asc" },
     }),
+    prisma.plazoPago.findMany({
+      where:   { empresaId },
+      orderBy: { dias: "asc" },
+    }),
   ]);
 
   if (!usuario) redirect("/login");
@@ -54,6 +58,7 @@ export default async function ConfiguracionPage() {
       contadorActual={contador?.contador ?? 0}
       anioActual={new Date().getFullYear()}
       series={JSON.parse(JSON.stringify(series))}
+      plazosPago={JSON.parse(JSON.stringify(plazosPago))}
     />
   );
 }

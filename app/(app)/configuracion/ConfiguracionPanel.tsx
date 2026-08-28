@@ -5,12 +5,18 @@ import { useRouter } from "next/navigation";
 import {
   User, Euro, FileText, Wrench,
   Save, Plus, Power, PowerOff, Check,
-  Hash, Image, Shield, CreditCard, Star,
+  Hash, Image, Shield, CreditCard, Star, Clock,
 } from "lucide-react";
 
 type TipoServicio = {
   id: string; nombre: string; unidad: string;
   activo: boolean; orden: number;
+};
+
+type PlazoPago = {
+  id:     string;
+  dias:   number;
+  activo: boolean;
 };
 
 type Serie = {
@@ -34,6 +40,7 @@ export default function ConfiguracionPanel({
   usuario, tiposServicio: tiposIniciales,
   empresa: empresaInicial, contadorActual, anioActual,
   series: seriesIniciales,
+  plazosPago: plazosPagoIniciales,
 }: {
   usuario: any;
   tiposServicio: TipoServicio[];
@@ -41,6 +48,7 @@ export default function ConfiguracionPanel({
   contadorActual: number;
   anioActual: number;
   series: Serie[];
+  plazosPago: PlazoPago[];
 }) {
   const router = useRouter();
   const [pestana, setPestana]   = useState("perfil");
@@ -98,6 +106,12 @@ export default function ConfiguracionPanel({
   const [nuevoNombre, setNuevoNombre] = useState("");
   const [nuevoUnidad, setNuevoUnidad] = useState("h");
   const [addingTipo, setAddingTipo]   = useState(false);
+
+  // Plazos de pago
+  const [plazos, setPlazos]             = useState<PlazoPago[]>(plazosPagoIniciales);
+  const [nuevoPlazoDias, setNuevoPlazoDias] = useState("");
+  const [addingPlazo, setAddingPlazo]   = useState(false);
+  const [errorPlazo, setErrorPlazo]     = useState("");
 
   // Series de facturación
   const [series, setSeries]           = useState<Serie[]>(seriesIniciales);
@@ -229,6 +243,38 @@ export default function ConfiguracionPanel({
     setAddingTipo(false);
   };
 
+  // Plazos de pago
+  const handleTogglePlazo = async (plazo: PlazoPago) => {
+    const res = await fetch(`/api/plazos-pago/${plazo.id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ activo: !plazo.activo }),
+    });
+    if (res.ok) setPlazos((prev) => prev.map((p) => p.id === plazo.id ? { ...p, activo: !p.activo } : p));
+  };
+
+  const handleAddPlazo = async () => {
+    if (nuevoPlazoDias === "") return;
+    setAddingPlazo(true);
+    setErrorPlazo("");
+    const res = await fetch("/api/plazos-pago", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ dias: nuevoPlazoDias }),
+    });
+    const data = await res.json();
+    if (res.ok) {
+      setPlazos((prev) => {
+        const sinDuplicado = prev.filter((p) => p.id !== data.id);
+        return [...sinDuplicado, data].sort((a, b) => a.dias - b.dias);
+      });
+      setNuevoPlazoDias("");
+    } else {
+      setErrorPlazo(data.error ?? "No se pudo añadir el plazo.");
+    }
+    setAddingPlazo(false);
+  };
+
   // Series de facturación
   const handleAddSerie = async () => {
     if (!nuevaSerie.nombre.trim() || !nuevaSerie.prefijo.trim()) return;
@@ -293,6 +339,7 @@ export default function ConfiguracionPanel({
     { id: "empresa",   label: "Empresa",                icon: <Image size={15} /> },
     { id: "series",    label: "Series facturación",     icon: <CreditCard size={15} /> },
     { id: "servicios", label: "Tipos de servicio",      icon: <Wrench size={15} /> },
+    { id: "plazos",     label: "Plazos de pago",          icon: <Clock size={15} /> },
     { id: "contador",  label: "Contador facturas",      icon: <Hash size={15} /> },
     { id: "verifactu", label: "Veri*Factu",              icon: <Shield size={15} /> },
   ];
@@ -780,6 +827,84 @@ export default function ConfiguracionPanel({
                   </div>
                 ))}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pestaña Plazos de pago */}
+      {pestana === "plazos" && (
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-2">
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center">
+                    <Clock size={15} className="text-purple-600" />
+                  </div>
+                  <h2 className="text-sm font-semibold text-gray-700">Plazos de pago</h2>
+                  <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">{plazos.length}</span>
+                </div>
+              </div>
+              <div>
+                <div className="grid grid-cols-12 px-5 py-2 bg-gray-50 border-b border-gray-100">
+                  <div className="col-span-6 text-xs text-gray-400 uppercase tracking-wide">Plazo</div>
+                  <div className="col-span-3 text-xs text-gray-400 uppercase tracking-wide text-center">Estado</div>
+                  <div className="col-span-3 text-xs text-gray-400 uppercase tracking-wide text-center">Acción</div>
+                </div>
+                {plazos.length === 0 ? (
+                  <div className="px-5 py-8 text-center text-sm text-gray-400">
+                    Todavía no hay plazos de pago configurados.
+                  </div>
+                ) : (
+                  plazos.map((plazo) => (
+                    <div key={plazo.id} className="grid grid-cols-12 px-5 py-4 border-b border-gray-50 items-center">
+                      <div className="col-span-6 text-sm font-medium text-gray-800">
+                        {plazo.dias === 0 ? "Al contado" : `${plazo.dias} días`}
+                      </div>
+                      <div className="col-span-3 flex justify-center">
+                        <span className={`text-xs px-2.5 py-1 rounded-full font-medium ${plazo.activo ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
+                          {plazo.activo ? "Activo" : "Inactivo"}
+                        </span>
+                      </div>
+                      <div className="col-span-3 flex justify-center">
+                        <button onClick={() => handleTogglePlazo(plazo)}
+                          className={`flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-lg border transition-colors cursor-pointer ${
+                            plazo.activo ? "border-gray-200 text-gray-500 hover:bg-gray-50" : "border-green-200 text-green-600 hover:bg-green-50"
+                          }`}>
+                          {plazo.activo ? <PowerOff size={12} /> : <Power size={12} />}
+                          {plazo.activo ? "Desactivar" : "Activar"}
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+              <div className="px-5 py-4 bg-gray-50 border-t border-gray-100">
+                <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-3">Añadir nuevo plazo</p>
+                {errorPlazo && (
+                  <div className="mb-3 px-3 py-2 bg-red-50 border border-red-200 rounded-lg text-xs text-red-600">{errorPlazo}</div>
+                )}
+                <div className="flex gap-3">
+                  <input type="number" min="0" placeholder="Nº de días (0 = al contado)..."
+                    value={nuevoPlazoDias} onChange={(e) => setNuevoPlazoDias(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && handleAddPlazo()}
+                    className="flex-1 px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                  <button onClick={handleAddPlazo} disabled={addingPlazo || nuevoPlazoDias === ""}
+                    className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-4 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer">
+                    <Plus size={15} /> Añadir
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="space-y-4">
+            <div className="bg-blue-50 rounded-xl border border-blue-100 p-5">
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Cómo se usa</div>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                Estos son los plazos que podrás elegir en la ficha de cada cliente. Al facturarle, la fecha de
+                vencimiento se calculará sola sumando estos días a la fecha de la factura.
+              </p>
             </div>
           </div>
         </div>
