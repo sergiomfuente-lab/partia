@@ -14,7 +14,7 @@ export default async function TecnicoNuevaOrdenPage() {
 
   const clientes = await prisma.cliente.findMany({
     where:   { empresaId, activo: true },
-    select:  { id: true, nombre: true },
+    select:  { id: true, nombre: true, nombreComercial: true },
     orderBy: { nombre: "asc" },
   });
 

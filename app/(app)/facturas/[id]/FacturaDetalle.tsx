@@ -175,6 +175,14 @@ export default function FacturaDetalle({
           );
         })}
       </div>
+      {factura.estado === "cobrada" && factura.pagadoPor && (
+        <div className="text-xs text-gray-400 mb-6 -mt-6">
+          Marcada como pagada por <span className="font-medium text-gray-600">{factura.pagadoPor.nombre}</span>
+          {factura.fechaPago && (
+            <> el {new Date(factura.fechaPago).toLocaleString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })}</>
+          )}
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-6">
         {/* Columna izquierda */}

@@ -40,6 +40,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     where: { id },
     data: {
       ...(body.nombre               !== undefined && { nombre:               body.nombre }),
+      ...(body.nombreComercial      !== undefined && { nombreComercial:      body.nombreComercial }),
       ...(body.razonSocial          !== undefined && { razonSocial:          body.razonSocial }),
       ...(body.cif                  !== undefined && { cif:                  body.cif }),
       ...(body.direccionFacturacion !== undefined && { direccionFacturacion: body.direccionFacturacion }),

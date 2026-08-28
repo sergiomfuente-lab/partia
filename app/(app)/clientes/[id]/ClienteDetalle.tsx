@@ -60,6 +60,9 @@ export default function ClienteDetalle({ cliente }: Props) {
                 </span>
               </div>
               <div className="text-sm text-gray-400 mt-0.5">{cliente.cif} · {cliente.razonSocial || cliente.nombre}</div>
+              {cliente.nombreComercial && (
+                <div className="text-xs text-gray-400 mt-0.5">Nombre comercial (técnico): {cliente.nombreComercial}</div>
+              )}
             </div>
           </div>
         </div>
@@ -163,6 +166,10 @@ export default function ClienteDetalle({ cliente }: Props) {
                 <div>
                   <div className="text-xs text-gray-400 mb-1">Razón social</div>
                   <div className="text-sm font-medium text-gray-800">{cliente.razonSocial || "—"}</div>
+                </div>
+                <div>
+                  <div className="text-xs text-gray-400 mb-1">Nombre comercial (visible para el técnico)</div>
+                  <div className="text-sm font-medium text-gray-800">{cliente.nombreComercial || "—"}</div>
                 </div>
                 <div>
                   <div className="text-xs text-gray-400 mb-1">CIF / NIF</div>

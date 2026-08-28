@@ -67,6 +67,7 @@ model Usuario {
   dni                 String?
   ordenesAsignadas    Orden[]
   comprasRegistradas  Compra[]
+  facturasPagadas     Factura[]
 }
 
 model ContadorFactura {
@@ -120,6 +121,7 @@ model SerieFacturacion {
 model Cliente {
   id                   String        @id @default(cuid())
   nombre               String
+  nombreComercial      String?
   razonSocial          String?
   cif                  String?
   direccionFacturacion String?
@@ -148,6 +150,7 @@ model Maquina {
   marca          String
   modelo         String
   numeroDeSerie  String
+  matricula      String?
   horasIniciales Float         @default(0)
   horasActuales  Float         @default(0)
   observaciones  String?
@@ -285,6 +288,11 @@ model Factura {
   huella              String?
   huellaAnterior      String?
   fechaHoraHuella     DateTime?
+
+  // Registro de quién y cuándo marcó la factura como pagada
+  fechaPago           DateTime?
+  pagadoPorId         String?
+  pagadoPor           Usuario?  @relation(fields: [pagadoPorId], references: [id])
 
   @@unique([empresaId, numero])
 }

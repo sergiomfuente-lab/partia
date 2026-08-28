@@ -9,6 +9,7 @@ type Maquina = {
   marca: string;
   modelo: string;
   numeroDeSerie: string;
+  matricula: string | null;
   horasActuales: number;
   estado: string;
   cliente: { id: string; nombre: string };
@@ -162,8 +163,13 @@ export default function MaquinasLista() {
                   </div>
                 </div>
 
-                {/* Nº serie */}
-                <div className="col-span-2 text-sm text-gray-500 font-mono">{m.numeroDeSerie}</div>
+                {/* Nº serie / Matrícula */}
+                <div className="col-span-2">
+                  <div className="text-sm text-gray-500 font-mono">{m.numeroDeSerie}</div>
+                  {m.matricula && (
+                    <div className="text-xs text-gray-400 font-mono">{m.matricula}</div>
+                  )}
+                </div>
 
                 {/* Cliente */}
                 <div className="col-span-2 flex items-center gap-1.5 text-sm text-gray-500">

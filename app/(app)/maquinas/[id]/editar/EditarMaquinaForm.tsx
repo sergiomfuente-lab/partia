@@ -15,6 +15,7 @@ export default function EditarMaquinaForm({ maquina }: { maquina: any }) {
     marca:          maquina.marca,
     modelo:         maquina.modelo,
     numeroDeSerie:  maquina.numeroDeSerie,
+    matricula:      maquina.matricula ?? "",
     horasIniciales: String(maquina.horasIniciales),
     horasActuales:  String(maquina.horasActuales),
     estado:         maquina.estado,
@@ -186,6 +187,20 @@ export default function EditarMaquinaForm({ maquina }: { maquina: any }) {
                        form.estado === "en_reparacion" ? "En reparación" : "Inactivo"}
                     </div>
                   </div>
+                </div>
+
+                {/* Matrícula */}
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Matrícula / Nº parque
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Ej: 1234-ABC"
+                    value={form.matricula}
+                    onChange={(e) => set("matricula", e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white font-mono"
+                  />
                 </div>
 
                 {/* Horas */}

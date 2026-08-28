@@ -340,7 +340,7 @@ export default function TecnicoOrdenDetalle({
           </span>
         </div>
         <div className="flex items-center gap-1.5 text-sm text-gray-700 mb-1">
-          <Building2 size={14} className="text-gray-400 shrink-0" /> {orden.cliente?.nombre}
+          <Building2 size={14} className="text-gray-400 shrink-0" /> {orden.cliente?.nombreComercial || orden.cliente?.nombre}
         </div>
         {orden.cliente?.telefono && (
           <a href={`tel:${orden.cliente.telefono}`} className="flex items-center gap-1.5 text-sm text-[#00C2FF] mb-1">

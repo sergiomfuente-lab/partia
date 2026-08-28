@@ -7,6 +7,7 @@ import { Eye, Pencil, Plus, Users, Search } from "lucide-react";
 interface Cliente {
   id: string;
   nombre: string;
+  nombreComercial: string | null;
   razonSocial: string | null;
   cif: string;
   email: string | null;
@@ -27,7 +28,8 @@ export default function ClientesLista({ clientes }: Props) {
       c.nombre.toLowerCase().includes(busqueda.toLowerCase()) ||
       c.cif.toLowerCase().includes(busqueda.toLowerCase()) ||
       (c.email?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
-      (c.razonSocial?.toLowerCase().includes(busqueda.toLowerCase()) ?? false);
+      (c.razonSocial?.toLowerCase().includes(busqueda.toLowerCase()) ?? false) ||
+      (c.nombreComercial?.toLowerCase().includes(busqueda.toLowerCase()) ?? false);
 
     const coincideTipo =
       filtroTipo === "todos" || c.tipo === filtroTipo;

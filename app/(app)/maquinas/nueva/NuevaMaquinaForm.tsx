@@ -21,6 +21,7 @@ export default function NuevaMaquinaForm() {
     marca:         "",
     modelo:        "",
     numeroDeSerie: "",
+    matricula: "",
     horasIniciales: "0",
     observaciones: "",
   });
@@ -136,7 +137,7 @@ export default function NuevaMaquinaForm() {
               </div>
             </div>
 
-            {/* Nº serie + Horas iniciales */}
+            {/* Nº serie + Matrícula */}
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
@@ -150,6 +151,22 @@ export default function NuevaMaquinaForm() {
                   className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white font-mono"
                 />
               </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                  Matrícula / Nº parque
+                </label>
+                <input
+                  type="text"
+                  placeholder="Ej: 1234-ABC"
+                  value={form.matricula}
+                  onChange={(e) => set("matricula", e.target.value)}
+                  className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white font-mono"
+                />
+              </div>
+            </div>
+
+            {/* Horas iniciales */}
+            <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                   Horas iniciales

@@ -41,6 +41,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(body.marca          !== undefined && { marca: body.marca }),
       ...(body.modelo         !== undefined && { modelo: body.modelo }),
       ...(body.numeroDeSerie  !== undefined && { numeroDeSerie: body.numeroDeSerie }),
+      ...(body.matricula      !== undefined && { matricula: body.matricula }),
       ...(body.horasIniciales !== undefined && { horasIniciales: body.horasIniciales }),
       ...(body.horasActuales  !== undefined && { horasActuales: body.horasActuales }),
       ...(body.observaciones  !== undefined && { observaciones: body.observaciones }),

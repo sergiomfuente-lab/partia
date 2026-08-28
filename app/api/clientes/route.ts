@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
 
   const body = await req.json();
   const {
-    nombre, razonSocial, cif, direccionFacturacion,
+    nombre, nombreComercial, razonSocial, cif, direccionFacturacion,
     formaPago, email, telefono, tipo,
     observaciones, precioHoraEspecial, precioPorKmEspecial,
   } = body;
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   const cliente = await prisma.cliente.create({
     data: {
-      nombre, razonSocial, cif, direccionFacturacion,
+      nombre, nombreComercial, razonSocial, cif, direccionFacturacion,
       formaPago, email, telefono,
       tipo:               tipo ?? "empresa",
       observaciones,

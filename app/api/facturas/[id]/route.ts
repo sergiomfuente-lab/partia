@@ -17,6 +17,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
       where: { id, empresaId },
       include: {
         cliente: true,
+        pagadoPor: { select: { id: true, nombre: true } },
         ordenes: {
           include: {
             servicios:  { include: { tipoServicio: true } },
@@ -83,6 +84,18 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
   let updateData: any = {};
 
+  // Registrar quién y cuándo marca la factura como pagada (o revertir el
+  // registro si se cambia a un estado distinto de "cobrada").
+  if (estado !== undefined && estado !== factura.estado) {
+    if (estado === "cobrada") {
+      updateData.fechaPago   = new Date();
+      updateData.pagadoPorId = session.user.id;
+    } else {
+      updateData.fechaPago   = null;
+      updateData.pagadoPorId = null;
+    }
+  }
+
   if (tocaImporte) {
     const nuevoTipo  = tipoDescuento  ?? factura.tipoDescuento;
     const nuevoValor = descuentoValor ?? factura.descuentoValor;
@@ -108,6 +121,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     },
     include: {
       cliente: true,
+      pagadoPor: { select: { id: true, nombre: true } },
       ordenes: {
         include: {
           servicios:  { include: { tipoServicio: true } },

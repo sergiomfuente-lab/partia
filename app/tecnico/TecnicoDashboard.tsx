@@ -12,7 +12,7 @@ type Orden = {
   numero: string;
   fecha: string;
   estado: string;
-  cliente: { id: string; nombre: string };
+  cliente: { id: string; nombre: string; nombreComercial?: string | null };
   maquina: { id: string; marca: string; modelo: string };
   tecnico: { id: string; nombre: string } | null;
 };
@@ -104,7 +104,7 @@ export default function TecnicoDashboard({ tecnicoId }: { tecnicoId: string }) {
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-500 truncate">
-                      <Building2 size={12} className="shrink-0" /> {orden.cliente?.nombre}
+                      <Building2 size={12} className="shrink-0" /> {orden.cliente?.nombreComercial || orden.cliente?.nombre}
                     </div>
                     <div className="flex items-center gap-1.5 text-xs text-gray-400 truncate mt-0.5">
                       <Wrench size={12} className="shrink-0" /> {orden.maquina?.marca} {orden.maquina?.modelo}

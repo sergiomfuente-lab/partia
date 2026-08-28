@@ -22,6 +22,8 @@ type Factura = {
   total:         number;
   cliente:       { id: string; nombre: string };
   ordenes:       { id: string; numero: string }[];
+  fechaPago:     string | null;
+  pagadoPor:     { id: string; nombre: string } | null;
 };
 
 type Cliente = { id: string; nombre: string };
@@ -47,6 +49,7 @@ export default function FacturasLista({
   const [clienteId, setClienteId] = useState("");
   const [estado, setEstado]       = useState(searchParams.get("estado") ?? "");
   const [menuNueva, setMenuNueva] = useState(false);
+  const [marcandoId, setMarcandoId] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
@@ -62,6 +65,20 @@ export default function FacturasLista({
         setLoading(false);
       });
   }, [q, clienteId, estado]);
+
+  const handleMarcarCobrada = async (id: string) => {
+    setMarcandoId(id);
+    const res = await fetch(`/api/facturas/${id}`, {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ estado: "cobrada" }),
+    });
+    if (res.ok) {
+      const actualizada = await res.json();
+      setFacturas((prev) => prev.map((f) => (f.id === id ? { ...f, ...actualizada } : f)));
+    }
+    setMarcandoId(null);
+  };
 
   const hayFiltros = q || clienteId || estado;
 
@@ -212,7 +229,7 @@ export default function FacturasLista({
           <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-right">IVA</div>
           <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-right">Total</div>
           <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-center">Estado</div>
-          <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-center">Ver</div>
+          <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-center">Acciones</div>
         </div>
 
         {loading ? (
@@ -259,14 +276,25 @@ export default function FacturasLista({
                 <div className="col-span-1 text-sm text-gray-600 text-right">{f.iva.toFixed(2)} €</div>
                 <div className="col-span-1 text-sm font-bold text-gray-900 text-right">{f.total.toFixed(2)} €</div>
                 <div className="col-span-1 flex justify-center">
-                  <span className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${estadoInfo.className}`}>
+                  <span
+                    title={f.estado === "cobrada" && f.pagadoPor ? `Cobrada por ${f.pagadoPor.nombre}${f.fechaPago ? " · " + new Date(f.fechaPago).toLocaleString("es-ES") : ""}` : undefined}
+                    className={`inline-flex items-center gap-1 text-xs px-2.5 py-1 rounded-full font-medium ${estadoInfo.className}`}>
                     {estadoInfo.icon}{estadoInfo.label}
                   </span>
                 </div>
-                <div className="col-span-1 flex justify-center">
+                <div className="col-span-1 flex justify-center gap-1">
+                  {f.estado !== "cobrada" && (
+                    <button
+                      onClick={() => handleMarcarCobrada(f.id)}
+                      disabled={marcandoId === f.id}
+                      title="Marcar como pagada"
+                      className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-green-50 hover:text-green-600 hover:border-green-200 transition-colors cursor-pointer disabled:opacity-50 shrink-0">
+                      <CheckCircle2 size={13} />
+                    </button>
+                  )}
                   <Link href={`/facturas/${f.id}`}
-                    className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors cursor-pointer">
-                    <Eye size={15} />
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 transition-colors cursor-pointer shrink-0">
+                    <Eye size={13} />
                   </Link>
                 </div>
               </div>

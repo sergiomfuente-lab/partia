@@ -31,7 +31,7 @@ export async function GET(req: NextRequest) {
       }),
     },
     include: {
-      cliente:         { select: { id: true, nombre: true } },
+      cliente:         { select: { id: true, nombre: true, nombreComercial: true } },
       maquina:         { select: { id: true, marca: true, modelo: true } },
       tecnico:         { select: { id: true, nombre: true } },
       servicios:       { include: { tipoServicio: true } },
@@ -113,7 +113,7 @@ export async function POST(req: NextRequest) {
         },
       },
       include: {
-        cliente:         { select: { id: true, nombre: true } },
+        cliente:         { select: { id: true, nombre: true, nombreComercial: true } },
         maquina:         { select: { id: true, marca: true, modelo: true } },
         servicios:       { include: { tipoServicio: true } },
         serviciosLibres: true,

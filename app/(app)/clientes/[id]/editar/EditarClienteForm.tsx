@@ -20,6 +20,7 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
 
   const [form, setForm] = useState({
     nombre:              cliente.nombre              ?? "",
+    nombreComercial:     cliente.nombreComercial     ?? "",
     razonSocial:         cliente.razonSocial         ?? "",
     cif:                 cliente.cif                 ?? "",
     direccionFacturacion:cliente.direccionFacturacion ?? "",
@@ -49,6 +50,7 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         nombre:              form.nombre,
+        nombreComercial:     form.nombreComercial     || null,
         razonSocial:         form.razonSocial         || null,
         cif:                 form.cif,
         direccionFacturacion:form.direccionFacturacion || null,
@@ -137,6 +139,16 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
                   </label>
                   <input type="text" value={form.nombre} required
                     onChange={(e) => setField("nombre", e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Nombre comercial
+                  </label>
+                  <input type="text" value={form.nombreComercial}
+                    placeholder="Nombre por el que lo conoce el técnico (opcional)"
+                    onChange={(e) => setField("nombreComercial", e.target.value)}
                     className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
                 </div>
 

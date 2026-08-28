@@ -9,6 +9,7 @@ export default function NuevoClientePage() {
   const [error, setError] = useState("");
   const [form, setForm] = useState({
     nombre: "",
+    nombreComercial: "",
     razonSocial: "",
     cif: "",
     email: "",
@@ -63,6 +64,10 @@ export default function NuevoClientePage() {
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Razón social</label>
                 <input name="razonSocial" value={form.razonSocial} onChange={handleChange} placeholder="Transportes Pérez S.L." className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00C2FF] bg-gray-50"/>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Nombre comercial</label>
+                <input name="nombreComercial" value={form.nombreComercial} onChange={handleChange} placeholder="Nombre por el que lo conoce el técnico (opcional)" className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00C2FF] bg-gray-50"/>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">CIF / NIF *</label>

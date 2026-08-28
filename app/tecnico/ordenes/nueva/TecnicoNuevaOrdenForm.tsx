@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, FileText, UserPlus, Wrench as WrenchIcon } from "lucide-react";
 
-type Cliente = { id: string; nombre: string };
+type Cliente = { id: string; nombre: string; nombreComercial?: string | null };
 
 type Maquina = {
   id: string;
@@ -201,7 +201,7 @@ export default function TecnicoNuevaOrdenForm({
               >
                 <option value="">Selecciona un cliente...</option>
                 {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombre}</option>
+                  <option key={c.id} value={c.id}>{c.nombreComercial || c.nombre}</option>
                 ))}
               </select>
             ) : (

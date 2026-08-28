@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
           { marca:         { contains: q, mode: "insensitive" } },
           { modelo:        { contains: q, mode: "insensitive" } },
           { numeroDeSerie: { contains: q, mode: "insensitive" } },
+          { matricula:      { contains: q, mode: "insensitive" } },
         ],
       }),
     },
@@ -41,7 +42,7 @@ export async function POST(req: NextRequest) {
 
   const empresaId = (session.user as any).empresaId;
   const body      = await req.json();
-  const { marca, modelo, numeroDeSerie, horasIniciales, observaciones, clienteId } = body;
+  const { marca, modelo, numeroDeSerie, matricula, horasIniciales, observaciones, clienteId } = body;
 
   if (!marca || !modelo || !numeroDeSerie || !clienteId) {
     return NextResponse.json({ error: "Faltan campos obligatorios" }, { status: 400 });
@@ -53,6 +54,7 @@ export async function POST(req: NextRequest) {
   const maquina = await prisma.maquina.create({
     data: {
       marca, modelo, numeroDeSerie,
+      matricula: matricula || null,
       horasIniciales: horasIniciales ?? 0,
       horasActuales:  horasIniciales ?? 0,
       observaciones,

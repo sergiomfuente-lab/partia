@@ -23,6 +23,7 @@ export async function GET(req: NextRequest) {
     },
     include: {
       cliente:       { select: { id: true, nombre: true } },
+      pagadoPor:     { select: { id: true, nombre: true } },
       ordenes:       { select: { id: true, numero: true, fecha: true } },
       serie:         { select: { id: true, nombre: true, prefijo: true } },
       lineasDirectas:true,

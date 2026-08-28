@@ -79,6 +79,11 @@ export default function MaquinaDetalle({ maquina }: { maquina: any }) {
               <div className="text-sm text-gray-400 mt-0.5 font-mono">
                 Nº serie: {maquina.numeroDeSerie}
               </div>
+              {maquina.matricula && (
+                <div className="text-sm text-gray-400 mt-0.5 font-mono">
+                  Matrícula / Nº parque: {maquina.matricula}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -151,6 +156,13 @@ export default function MaquinaDetalle({ maquina }: { maquina: any }) {
                 <div>
                   <div className="text-xs text-gray-400 mb-0.5">Número de serie</div>
                   <div className="text-sm font-medium text-gray-800 font-mono">{maquina.numeroDeSerie}</div>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Hash size={14} className="text-gray-300 mt-0.5 shrink-0" />
+                <div>
+                  <div className="text-xs text-gray-400 mb-0.5">Matrícula / Nº parque</div>
+                  <div className="text-sm font-medium text-gray-800 font-mono">{maquina.matricula || "—"}</div>
                 </div>
               </div>
               <div className="flex items-start gap-3">
