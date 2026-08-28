@@ -1,11 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ShoppingCart, Plus, Package, Users,
   Calendar, ChevronRight, X, Save,
-  Trash2, ArrowUpDown, Building2,
+  Trash2, ArrowUpDown, Building2, Camera,
 } from "lucide-react";
 
 type Proveedor = { id: string; nombre: string; cif?: string; telefono?: string; email?: string; contacto?: string; activo: boolean; _count?: { compras: number } };
@@ -65,6 +65,9 @@ export default function ComprasPanel({
   const [lineas, setLineas]   = useState<LineaForm[]>([]);
   const [creando, setCreando] = useState(false);
   const [errorCompra, setErrorCompra] = useState("");
+  const [fotoCompraBase64, setFotoCompraBase64] = useState("");
+  const [procesandoFotoCompra, setProcesandoFotoCompra] = useState(false);
+  const fotoCompraInputRef = useRef<HTMLInputElement>(null);
 
   // Nuevo producto
   const [mostrarProducto, setMostrarProducto] = useState(false);
@@ -86,6 +89,25 @@ export default function ComprasPanel({
   const [salidaForm, setSalidaForm]             = useState({ cantidad: "1", motivo: "" });
   const [procesandoSalida, setProcesandoSalida] = useState(false);
   const [errorSalida, setErrorSalida]           = useState("");
+  const [salidaOrdenQuery, setSalidaOrdenQuery]           = useState("");
+  const [salidaOrdenResultados, setSalidaOrdenResultados] = useState<{ id: string; numero: string; cliente?: { nombre: string } }[]>([]);
+  const [salidaOrdenSeleccionada, setSalidaOrdenSeleccionada] = useState<{ id: string; numero: string } | null>(null);
+  const [buscandoOrdenSalida, setBuscandoOrdenSalida]     = useState(false);
+
+  useEffect(() => {
+    if (!salidaProductoId || salidaOrdenSeleccionada || salidaOrdenQuery.trim().length < 2) {
+      setSalidaOrdenResultados([]);
+      return;
+    }
+    setBuscandoOrdenSalida(true);
+    const t = setTimeout(() => {
+      fetch(`/api/ordenes?q=${encodeURIComponent(salidaOrdenQuery.trim())}`)
+        .then((r) => r.json())
+        .then((data) => setSalidaOrdenResultados(Array.isArray(data) ? data.slice(0, 6) : []))
+        .finally(() => setBuscandoOrdenSalida(false));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [salidaOrdenQuery, salidaProductoId, salidaOrdenSeleccionada]);
 
   // Detalle compra
   const [compraDetalle, setCompraDetalle] = useState<Compra | null>(null);
@@ -119,6 +141,31 @@ export default function ComprasPanel({
   const totalCompra = lineas.reduce((acc, l) => acc + parseFloat(l.cantidad || "0") * parseFloat(l.precioCoste || "0"), 0);
 
   // ---- Crear compra ----
+  const handleFotoCompra = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setProcesandoFotoCompra(true);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxAncho = 1280;
+        const escala   = Math.min(1, maxAncho / img.width);
+        const canvas   = document.createElement("canvas");
+        canvas.width   = img.width  * escala;
+        canvas.height  = img.height * escala;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, canvas.width, canvas.height);
+        setFotoCompraBase64(canvas.toDataURL("image/jpeg", 0.75));
+        setProcesandoFotoCompra(false);
+      };
+      img.onerror = () => setProcesandoFotoCompra(false);
+      img.src = reader.result as string;
+    };
+    reader.onerror = () => setProcesandoFotoCompra(false);
+    reader.readAsDataURL(file);
+  };
+
   const handleCrearCompra = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorCompra("");
@@ -131,6 +178,7 @@ export default function ComprasPanel({
       body: JSON.stringify({
         ...compraForm,
         proveedorId: compraForm.proveedorId || null,
+        fotoTicketBase64: fotoCompraBase64 || null,
         lineas: lineas.map((l) => ({
           productoId:  l.productoId  || null,
           descripcion: l.descripcion,
@@ -160,6 +208,7 @@ export default function ComprasPanel({
     setMostrarCompra(false);
     setLineas([]);
     setCompraForm({ fecha: hoy(), numeroAlbaran: "", proveedorId: "", proveedorNombre: "", observaciones: "" });
+    setFotoCompraBase64("");
     setCreando(false);
     router.refresh();
   };
@@ -208,7 +257,11 @@ export default function ComprasPanel({
     const res = await fetch(`/api/productos/${salidaProductoId}/salida`, {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify({ cantidad: parseFloat(salidaForm.cantidad), motivo: salidaForm.motivo }),
+      body:    JSON.stringify({
+        cantidad: parseFloat(salidaForm.cantidad),
+        motivo:   salidaForm.motivo,
+        ordenId:  salidaOrdenSeleccionada?.id ?? null,
+      }),
     });
     if (!res.ok) {
       const data = await res.json();
@@ -218,6 +271,10 @@ export default function ComprasPanel({
       setProductos(productosActualizados);
       setSalidaProductoId(null);
       setSalidaForm({ cantidad: "1", motivo: "" });
+      setSalidaOrdenSeleccionada(null);
+      setSalidaOrdenQuery("");
+      setSalidaOrdenResultados([]);
+      router.refresh();
     }
     setProcesandoSalida(false);
   };
@@ -280,7 +337,7 @@ export default function ComprasPanel({
             <div className="bg-white rounded-xl border border-gray-100 p-6 mb-6">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-sm font-semibold text-gray-700">Nueva compra</h2>
-                <button onClick={() => { setMostrarCompra(false); setLineas([]); setErrorCompra(""); }}
+                <button onClick={() => { setMostrarCompra(false); setLineas([]); setErrorCompra(""); setFotoCompraBase64(""); }}
                   className="text-gray-400 hover:text-gray-600 cursor-pointer"><X size={16} /></button>
               </div>
               <form onSubmit={handleCrearCompra} className="space-y-5">
@@ -406,11 +463,31 @@ export default function ComprasPanel({
                   )}
                 </div>
 
-                <div>
-                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Observaciones</label>
-                  <textarea rows={2} value={compraForm.observaciones}
-                    onChange={(e) => setCompraForm((p) => ({ ...p, observaciones: e.target.value }))}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white resize-none" />
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Observaciones</label>
+                    <textarea rows={2} value={compraForm.observaciones}
+                      onChange={(e) => setCompraForm((p) => ({ ...p, observaciones: e.target.value }))}
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white resize-none" />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Foto del ticket/factura</label>
+                    <input ref={fotoCompraInputRef} type="file" accept="image/*" onChange={handleFotoCompra} className="hidden" />
+                    {fotoCompraBase64 ? (
+                      <div className="relative inline-block">
+                        <img src={fotoCompraBase64} alt="Ticket" className="h-20 rounded-lg border border-gray-200 object-cover" />
+                        <button type="button" onClick={() => setFotoCompraBase64("")}
+                          className="absolute -top-2 -right-2 w-6 h-6 flex items-center justify-center bg-white rounded-full border border-gray-200 text-gray-500 shadow-sm cursor-pointer">
+                          <X size={13} />
+                        </button>
+                      </div>
+                    ) : (
+                      <button type="button" onClick={() => fotoCompraInputRef.current?.click()} disabled={procesandoFotoCompra}
+                        className="flex items-center gap-2 text-sm font-medium text-gray-600 border border-dashed border-gray-300 rounded-lg px-4 py-2.5 hover:bg-gray-50 disabled:opacity-50 cursor-pointer">
+                        <Camera size={16} /> {procesandoFotoCompra ? "Procesando..." : "Subir foto (opcional)"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {errorCompra && (
@@ -418,7 +495,7 @@ export default function ComprasPanel({
                 )}
 
                 <div className="flex justify-end gap-3">
-                  <button type="button" onClick={() => { setMostrarCompra(false); setLineas([]); }}
+                  <button type="button" onClick={() => { setMostrarCompra(false); setLineas([]); setFotoCompraBase64(""); }}
                     className="px-5 py-2.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer">Cancelar</button>
                   <button type="submit" disabled={creando}
                     className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer">
@@ -609,13 +686,49 @@ export default function ComprasPanel({
               <h3 className="text-sm font-semibold text-amber-700 mb-3">
                 Salida de stock — {productos.find((p) => p.id === salidaProductoId)?.nombre}
               </h3>
-              <div className="flex gap-3 items-end">
+              <div className="grid grid-cols-3 gap-3 mb-3">
                 <div>
                   <label className="block text-xs font-medium text-amber-600 uppercase tracking-wide mb-1.5">Cantidad</label>
                   <input type="number" min="0.01" step="0.01" value={salidaForm.cantidad}
                     onChange={(e) => setSalidaForm((p) => ({ ...p, cantidad: e.target.value }))}
-                    className="w-28 px-3 py-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white text-center" />
+                    className="w-full px-3 py-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white text-center" />
                 </div>
+                <div className="col-span-2">
+                  <label className="block text-xs font-medium text-amber-600 uppercase tracking-wide mb-1.5">Orden (opcional)</label>
+                  {salidaOrdenSeleccionada ? (
+                    <div className="flex items-center gap-2 px-3 py-2.5 text-sm border border-amber-200 rounded-lg bg-white">
+                      <span className="flex-1 truncate">{salidaOrdenSeleccionada.numero}</span>
+                      <button type="button" onClick={() => { setSalidaOrdenSeleccionada(null); setSalidaOrdenQuery(""); }}
+                        className="text-gray-400 hover:text-gray-600 cursor-pointer">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="relative">
+                      <input type="text" placeholder="Buscar por nº de orden..."
+                        value={salidaOrdenQuery}
+                        onChange={(e) => setSalidaOrdenQuery(e.target.value)}
+                        className="w-full px-3 py-2.5 text-sm border border-amber-200 rounded-lg focus:outline-none focus:border-amber-400 bg-white" />
+                      {(salidaOrdenResultados.length > 0 || buscandoOrdenSalida) && (
+                        <div className="absolute z-20 left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-sm overflow-hidden">
+                          {buscandoOrdenSalida ? (
+                            <div className="px-3 py-2 text-xs text-gray-400">Buscando...</div>
+                          ) : (
+                            salidaOrdenResultados.map((o) => (
+                              <button key={o.id} type="button"
+                                onClick={() => { setSalidaOrdenSeleccionada(o); setSalidaOrdenResultados([]); }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-gray-50 cursor-pointer">
+                                {o.numero}{o.cliente?.nombre ? ` — ${o.cliente.nombre}` : ""}
+                              </button>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+              <div className="flex gap-3 items-end">
                 <div className="flex-1">
                   <label className="block text-xs font-medium text-amber-600 uppercase tracking-wide mb-1.5">Motivo</label>
                   <input type="text" value={salidaForm.motivo}
@@ -628,9 +741,14 @@ export default function ComprasPanel({
                   <ArrowUpDown size={15} />
                   {procesandoSalida ? "Procesando..." : "Registrar salida"}
                 </button>
-                <button onClick={() => { setSalidaProductoId(null); setErrorSalida(""); }}
+                <button onClick={() => { setSalidaProductoId(null); setErrorSalida(""); setSalidaOrdenSeleccionada(null); setSalidaOrdenQuery(""); }}
                   className="px-4 py-2.5 text-sm text-gray-500 hover:text-gray-700 cursor-pointer">Cancelar</button>
               </div>
+              {salidaOrdenSeleccionada && (
+                <p className="text-[11px] text-amber-600 mt-2">
+                  Se descontará del almacén y se añadirá como recambio en la orden {salidaOrdenSeleccionada.numero}.
+                </p>
+              )}
               {errorSalida && <p className="text-xs text-red-500 mt-2">{errorSalida}</p>}
             </div>
           )}
@@ -677,7 +795,7 @@ export default function ComprasPanel({
                     <div className="col-span-2 text-sm text-gray-600 text-right">{p.precioVenta.toFixed(2)} €</div>
                     <div className="col-span-1 flex justify-center">
                       <button
-                        onClick={() => { setSalidaProductoId(p.id); setSalidaForm({ cantidad: "1", motivo: "" }); setErrorSalida(""); }}
+                        onClick={() => { setSalidaProductoId(p.id); setSalidaForm({ cantidad: "1", motivo: "" }); setErrorSalida(""); setSalidaOrdenSeleccionada(null); setSalidaOrdenQuery(""); setSalidaOrdenResultados([]); }}
                         className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-400 hover:bg-amber-50 hover:text-amber-600 hover:border-amber-200 transition-colors cursor-pointer"
                         title="Registrar salida"
                       >
