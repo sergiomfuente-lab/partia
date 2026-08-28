@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { calcularHuella } from "@/lib/verifactu";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -49,7 +50,10 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "El cliente es obligatorio" }, { status: 400 });
   }
 
-  const cliente = await prisma.cliente.findFirst({ where: { id: clienteId, empresaId } });
+  const [cliente, empresa] = await Promise.all([
+    prisma.cliente.findFirst({ where: { id: clienteId, empresaId } }),
+    prisma.empresa.findUnique({ where: { id: empresaId }, select: { cifNif: true, ultimaHuellaFactura: true } }),
+  ]);
   if (!cliente) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
 
   // Validar serie
@@ -84,56 +88,79 @@ export async function POST(req: NextRequest) {
       descuento = descuentoValor ?? 0;
     }
 
-    // Generar número con serie o contador legado
-    if (serie) {
-      const serieActualizada = await prisma.serieFacturacion.update({
-        where: { id: serie.id },
-        data:  { contadorActual: { increment: 1 } },
-      });
-      numero = `${serie.prefijo}-${String(serieActualizada.contadorActual).padStart(3, "0")}-${anio}`;
-    } else {
-      const contador = await prisma.contadorFactura.upsert({
-        where:  { empresaId_anio: { empresaId, anio } },
-        update: { contador: { increment: 1 } },
-        create: { empresaId, anio, contador: 1 },
-      });
-      numero = `${contador.contador}_${dia}-${mes}-${anio}`;
-    }
-
     const baseConDescuento = Math.max(0, baseImponible - descuento);
     const iva   = baseConDescuento * 0.21;
     const total = baseConDescuento + iva;
 
-    const factura = await prisma.factura.create({
-      data: {
-        numero, clienteId, empresaId,
-        serieId:        serieId ?? null,
-        fecha:          fechaFactura,
-        vencimiento:    vencimiento ? new Date(vencimiento) : null,
-        baseImponible,
-        descuento,
-        tipoDescuento:  tipoDescuento  ?? "euro",
-        descuentoValor: descuentoValor ?? 0,
-        iva, total,
-        notas:          notas ?? null,
-        esDirecta:      true,
-        lineasDirectas: {
-          create: lineasDirectas.map((l: any) => ({
-            tipo:           l.tipo          ?? "libre",
-            tipoServicioId: l.tipoServicioId ?? null,
-            descripcion:    l.descripcion,
-            cantidad:       l.cantidad,
-            precioCoste:    l.precioCoste   ?? 0,
-            precioVenta:    l.precioVenta,
-          })),
+    const factura = await prisma.$transaction(async (tx) => {
+      // Generar número con serie o contador legado
+      if (serie) {
+        const serieActualizada = await tx.serieFacturacion.update({
+          where: { id: serie.id },
+          data:  { contadorActual: { increment: 1 } },
+        });
+        numero = `${serie.prefijo}-${String(serieActualizada.contadorActual).padStart(3, "0")}-${anio}`;
+      } else {
+        const contador = await tx.contadorFactura.upsert({
+          where:  { empresaId_anio: { empresaId, anio } },
+          update: { contador: { increment: 1 } },
+          create: { empresaId, anio, contador: 1 },
+        });
+        numero = `${contador.contador}_${dia}-${mes}-${anio}`;
+      }
+
+      // Veri*Factu / RRSIF: huella encadenada del registro de facturación.
+      // Preparación técnica — ver lib/verifactu.ts y preguntas_gestoria_verifactu.md.
+      const fechaHoraGeneracion = new Date();
+      const huella = calcularHuella({
+        nifEmisor:           empresa?.cifNif ?? "",
+        numeroFactura:       numero,
+        fechaExpedicion:     fechaFactura,
+        tipoFactura:         "F1",
+        cuotaTotal:          iva,
+        importeTotal:        total,
+        huellaAnterior:      empresa?.ultimaHuellaFactura ?? null,
+        fechaHoraGeneracion,
+      });
+
+      const nuevaFactura = await tx.factura.create({
+        data: {
+          numero, clienteId, empresaId,
+          serieId:        serieId ?? null,
+          fecha:          fechaFactura,
+          vencimiento:    vencimiento ? new Date(vencimiento) : null,
+          baseImponible,
+          descuento,
+          tipoDescuento:  tipoDescuento  ?? "euro",
+          descuentoValor: descuentoValor ?? 0,
+          iva, total,
+          notas:          notas ?? null,
+          esDirecta:      true,
+          huella,
+          huellaAnterior: empresa?.ultimaHuellaFactura ?? null,
+          fechaHoraHuella: fechaHoraGeneracion,
+          lineasDirectas: {
+            create: lineasDirectas.map((l: any) => ({
+              tipo:           l.tipo          ?? "libre",
+              tipoServicioId: l.tipoServicioId ?? null,
+              descripcion:    l.descripcion,
+              cantidad:       l.cantidad,
+              precioCoste:    l.precioCoste   ?? 0,
+              precioVenta:    l.precioVenta,
+            })),
+          },
         },
-      },
-      include: {
-        cliente:        true,
-        serie:          true,
-        lineasDirectas: true,
-        ordenes:        true,
-      },
+        include: {
+          cliente:        true,
+          serie:          true,
+          lineasDirectas: true,
+          ordenes:        true,
+        },
+      });
+
+      await tx.empresa.update({ where: { id: empresaId }, data: { ultimaHuellaFactura: huella } });
+
+      return nuevaFactura;
     });
 
     return NextResponse.json(factura, { status: 201 });
@@ -162,58 +189,80 @@ export async function POST(req: NextRequest) {
       descuento = descuentoValor ?? 0;
     }
 
-    // Generar número con serie o contador legado
-    if (serie) {
-      const serieActualizada = await prisma.serieFacturacion.update({
-        where: { id: serie.id },
-        data:  { contadorActual: { increment: 1 } },
-      });
-      numero = `${serie.prefijo}-${String(serieActualizada.contadorActual).padStart(3, "0")}-${anio}`;
-    } else {
-      const contador = await prisma.contadorFactura.upsert({
-        where:  { empresaId_anio: { empresaId, anio } },
-        update: { contador: { increment: 1 } },
-        create: { empresaId, anio, contador: 1 },
-      });
-      numero = `${contador.contador}_${dia}-${mes}-${anio}`;
-    }
-
     const baseConDescuento = Math.max(0, baseImponible - descuento);
     const iva   = baseConDescuento * 0.21;
     const total = baseConDescuento + iva;
 
-    const factura = await prisma.factura.create({
-      data: {
-        numero, clienteId, empresaId,
-        serieId:        serieId ?? null,
-        fecha:          fechaFactura,
-        vencimiento:    vencimiento ? new Date(vencimiento) : null,
-        baseImponible,
-        descuento,
-        tipoDescuento:  tipoDescuento  ?? "euro",
-        descuentoValor: descuentoValor ?? 0,
-        iva, total,
-        notas:          notas ?? null,
-        esDirecta:      false,
-        ordenes: { connect: ordenIds.map((id: string) => ({ id })) },
-      },
-      include: {
-        cliente: true,
-        serie:   true,
-        ordenes: {
-          include: {
-            servicios:       { include: { tipoServicio: true } },
-            serviciosLibres: true,
-            repuestos:       true,
-            maquina:         true,
+    const factura = await prisma.$transaction(async (tx) => {
+      // Generar número con serie o contador legado
+      if (serie) {
+        const serieActualizada = await tx.serieFacturacion.update({
+          where: { id: serie.id },
+          data:  { contadorActual: { increment: 1 } },
+        });
+        numero = `${serie.prefijo}-${String(serieActualizada.contadorActual).padStart(3, "0")}-${anio}`;
+      } else {
+        const contador = await tx.contadorFactura.upsert({
+          where:  { empresaId_anio: { empresaId, anio } },
+          update: { contador: { increment: 1 } },
+          create: { empresaId, anio, contador: 1 },
+        });
+        numero = `${contador.contador}_${dia}-${mes}-${anio}`;
+      }
+
+      // Veri*Factu / RRSIF: huella encadenada del registro de facturación.
+      const fechaHoraGeneracion = new Date();
+      const huella = calcularHuella({
+        nifEmisor:           empresa?.cifNif ?? "",
+        numeroFactura:       numero,
+        fechaExpedicion:     fechaFactura,
+        tipoFactura:         "F1",
+        cuotaTotal:          iva,
+        importeTotal:        total,
+        huellaAnterior:      empresa?.ultimaHuellaFactura ?? null,
+        fechaHoraGeneracion,
+      });
+
+      const nuevaFactura = await tx.factura.create({
+        data: {
+          numero, clienteId, empresaId,
+          serieId:        serieId ?? null,
+          fecha:          fechaFactura,
+          vencimiento:    vencimiento ? new Date(vencimiento) : null,
+          baseImponible,
+          descuento,
+          tipoDescuento:  tipoDescuento  ?? "euro",
+          descuentoValor: descuentoValor ?? 0,
+          iva, total,
+          notas:          notas ?? null,
+          esDirecta:      false,
+          huella,
+          huellaAnterior: empresa?.ultimaHuellaFactura ?? null,
+          fechaHoraHuella: fechaHoraGeneracion,
+          ordenes: { connect: ordenIds.map((id: string) => ({ id })) },
+        },
+        include: {
+          cliente: true,
+          serie:   true,
+          ordenes: {
+            include: {
+              servicios:       { include: { tipoServicio: true } },
+              serviciosLibres: true,
+              repuestos:       true,
+              maquina:         true,
+            },
           },
         },
-      },
-    });
+      });
 
-    await prisma.orden.updateMany({
-      where: { id: { in: ordenIds }, estado: { not: "completado" } },
-      data:  { estado: "completado" },
+      await tx.orden.updateMany({
+        where: { id: { in: ordenIds }, estado: { not: "completado" } },
+        data:  { estado: "completado" },
+      });
+
+      await tx.empresa.update({ where: { id: empresaId }, data: { ultimaHuellaFactura: huella } });
+
+      return nuevaFactura;
     });
 
     return NextResponse.json(factura, { status: 201 });

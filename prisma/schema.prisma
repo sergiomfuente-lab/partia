@@ -39,6 +39,15 @@ model Empresa {
   series           SerieFacturacion[]
   abonos           Abono[]
   facturas         Factura[]
+
+  // Veri*Factu / RRSIF (Real Decreto 1007/2023) — configuración por empresa,
+  // a rellenar una vez la gestoría confirme régimen y modalidad aplicables.
+  facturacionInmutableActiva Boolean   @default(false)
+  regimenFiscalVerifactu     String?
+  verifactuModalidad         String?
+  verifactuFechaLimite       DateTime?
+  verifactuNotasGestoria     String?
+  ultimaHuellaFactura        String?
 }
 
 model Usuario {
@@ -272,6 +281,11 @@ model Factura {
   abonos         Abono[]
   createdAt      DateTime         @default(now())
 
+  // Veri*Factu / RRSIF: huella (hash) encadenada del registro de facturación
+  huella              String?
+  huellaAnterior      String?
+  fechaHoraHuella     DateTime?
+
   @@unique([empresaId, numero])
 }
 
@@ -306,6 +320,12 @@ model Abono {
   empresa       Empresa          @relation(fields: [empresaId], references: [id])
   lineas        AbonoLinea[]
   createdAt     DateTime         @default(now())
+
+  // Veri*Factu / RRSIF: tipo de rectificativa (R1-R5) y huella encadenada
+  tipoRectificacion   String?   @default("R1")
+  huella              String?
+  huellaAnterior      String?
+  fechaHoraHuella     DateTime?
 
   @@unique([empresaId, numero])
 }

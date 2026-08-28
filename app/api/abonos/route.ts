@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { prisma } from "@/lib/prisma";
+import { calcularHuella, TipoFacturaVerifactu } from "@/lib/verifactu";
 
 export async function GET(req: NextRequest) {
   const session = await auth();
@@ -34,7 +35,7 @@ export async function POST(req: NextRequest) {
   const empresaId = (session.user as any).empresaId;
   if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const body      = await req.json();
-  const { facturaId, serieId, tipo, motivo, lineas, fecha } = body;
+  const { facturaId, serieId, tipo, motivo, lineas, fecha, tipoRectificacion } = body;
 
   if (!facturaId) return NextResponse.json({ error: "La factura es obligatoria" }, { status: 400 });
   if (!serieId)   return NextResponse.json({ error: "La serie es obligatoria" }, { status: 400 });
@@ -50,6 +51,11 @@ export async function POST(req: NextRequest) {
   const serie = await prisma.serieFacturacion.findFirst({ where: { id: serieId, empresaId } });
   if (!serie) return NextResponse.json({ error: "Serie no encontrada" }, { status: 404 });
 
+  const empresa = await prisma.empresa.findUnique({
+    where:  { id: empresaId },
+    select: { cifNif: true, ultimaHuellaFactura: true },
+  });
+
   // Calcular totales
   const baseImponible = lineas.reduce(
     (acc: number, l: any) => acc + l.cantidad * l.precio, 0
@@ -57,44 +63,70 @@ export async function POST(req: NextRequest) {
   const iva   = baseImponible * 0.21;
   const total = baseImponible + iva;
 
-  // Generar número de abono con el contador de abonos de la serie
   const fechaAbono = fecha ? new Date(fecha) : new Date();
   const anio       = fechaAbono.getFullYear();
+  const tipoRect: TipoFacturaVerifactu = (tipoRectificacion as TipoFacturaVerifactu) ?? "R1";
 
-  const serieActualizada = await prisma.serieFacturacion.update({
-    where: { id: serie.id },
-    data:  { contadorAbono: { increment: 1 } },
-  });
+  const abono = await prisma.$transaction(async (tx) => {
+    // Generar número de abono con el contador de abonos de la serie
+    const serieActualizada = await tx.serieFacturacion.update({
+      where: { id: serie.id },
+      data:  { contadorAbono: { increment: 1 } },
+    });
 
-  const prefijo = serie.prefijoAbono || `ABO-${serie.prefijo}`;
-  const numero  = `${prefijo}-${String(serieActualizada.contadorAbono).padStart(3, "0")}-${anio}`;
+    const prefijo = serie.prefijoAbono || `ABO-${serie.prefijo}`;
+    const numero  = `${prefijo}-${String(serieActualizada.contadorAbono).padStart(3, "0")}-${anio}`;
 
-  const abono = await prisma.abono.create({
-    data: {
-      numero,
-      facturaId,
-      serieId,
-      empresaId,
-      tipo:         tipo    ?? "parcial",
-      motivo:       motivo  ?? null,
-      fecha:        fechaAbono,
-      baseImponible,
-      iva,
-      total,
-      lineas: {
-        create: lineas.map((l: any) => ({
-          descripcion: l.descripcion,
-          cantidad:    l.cantidad,
-          precio:      l.precio,
-          total:       l.cantidad * l.precio,
-        })),
+    // Veri*Factu / RRSIF: un abono (factura rectificativa) es también un
+    // registro de facturación y entra en la misma cadena de huellas que las
+    // facturas normales de la empresa.
+    const fechaHoraGeneracion = new Date();
+    const huella = calcularHuella({
+      nifEmisor:           empresa?.cifNif ?? "",
+      numeroFactura:       numero,
+      fechaExpedicion:     fechaAbono,
+      tipoFactura:         tipoRect,
+      cuotaTotal:          iva,
+      importeTotal:        total,
+      huellaAnterior:      empresa?.ultimaHuellaFactura ?? null,
+      fechaHoraGeneracion,
+    });
+
+    const nuevoAbono = await tx.abono.create({
+      data: {
+        numero,
+        facturaId,
+        serieId,
+        empresaId,
+        tipo:         tipo    ?? "parcial",
+        motivo:       motivo  ?? null,
+        fecha:        fechaAbono,
+        baseImponible,
+        iva,
+        total,
+        tipoRectificacion: tipoRect,
+        huella,
+        huellaAnterior: empresa?.ultimaHuellaFactura ?? null,
+        fechaHoraHuella: fechaHoraGeneracion,
+        lineas: {
+          create: lineas.map((l: any) => ({
+            descripcion: l.descripcion,
+            cantidad:    l.cantidad,
+            precio:      l.precio,
+            total:       l.cantidad * l.precio,
+          })),
+        },
       },
-    },
-    include: {
-      serie:   true,
-      factura: { select: { id: true, numero: true } },
-      lineas:  true,
-    },
+      include: {
+        serie:   true,
+        factura: { select: { id: true, numero: true } },
+        lineas:  true,
+      },
+    });
+
+    await tx.empresa.update({ where: { id: empresaId }, data: { ultimaHuellaFactura: huella } });
+
+    return nuevoAbono;
   });
 
   return NextResponse.json(abono, { status: 201 });

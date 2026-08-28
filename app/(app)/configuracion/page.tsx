@@ -25,6 +25,9 @@ export default async function ConfiguracionPage() {
         provincia: true, telefono: true, emailFacturacion: true,
         iban: true, precioHora: true, precioPorKm: true,
         logoBase64: true, textoRgpd: true,
+        facturacionInmutableActiva: true, regimenFiscalVerifactu: true,
+        verifactuModalidad: true, verifactuFechaLimite: true,
+        verifactuNotasGestoria: true,
       },
     }),
     prisma.contadorFactura.findUnique({

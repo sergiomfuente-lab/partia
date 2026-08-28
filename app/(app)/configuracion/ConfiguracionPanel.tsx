@@ -69,6 +69,20 @@ export default function ConfiguracionPanel({
     iban:             empresaInicial?.iban             ?? "",
   });
 
+  // Veri*Factu / RRSIF — configuración de facturación electrónica de la empresa
+  const [verifactu, setVerifactu] = useState({
+    facturacionInmutableActiva: empresaInicial?.facturacionInmutableActiva ?? false,
+    regimenFiscalVerifactu:     empresaInicial?.regimenFiscalVerifactu     ?? "",
+    verifactuModalidad:         empresaInicial?.verifactuModalidad         ?? "",
+    verifactuFechaLimite:       empresaInicial?.verifactuFechaLimite
+      ? String(empresaInicial.verifactuFechaLimite).slice(0, 10)
+      : "",
+    verifactuNotasGestoria:     empresaInicial?.verifactuNotasGestoria     ?? "",
+  });
+  const [savingVerifactu, setSavingVerifactu] = useState(false);
+  const [savedVerifactu, setSavedVerifactu]   = useState(false);
+  const setVField = (f: string, v: string | boolean) => setVerifactu((p) => ({ ...p, [f]: v }));
+
   // Empresa
   const [textoRgpd, setTextoRgpd]     = useState(empresaInicial?.textoRgpd ?? "");
   const [logoBase64, setLogoBase64]   = useState(empresaInicial?.logoBase64 ?? "");
@@ -138,6 +152,27 @@ export default function ConfiguracionPanel({
     });
     if (!res.ok) { setError("Error al guardar."); setLoading(false); return; }
     showSaved(); setLoading(false); router.refresh();
+  };
+
+  // Guardar configuración Veri*Factu / RRSIF
+  const handleSaveVerifactu = async () => {
+    setSavingVerifactu(true); setError("");
+    const res = await fetch("/api/configuracion", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        facturacionInmutableActiva: verifactu.facturacionInmutableActiva,
+        regimenFiscalVerifactu:     verifactu.regimenFiscalVerifactu || null,
+        verifactuModalidad:         verifactu.verifactuModalidad || null,
+        verifactuFechaLimite:       verifactu.verifactuFechaLimite || null,
+        verifactuNotasGestoria:     verifactu.verifactuNotasGestoria,
+      }),
+    });
+    if (!res.ok) { setError("Error al guardar."); setSavingVerifactu(false); return; }
+    setSavedVerifactu(true);
+    setTimeout(() => setSavedVerifactu(false), 3000);
+    setSavingVerifactu(false);
+    router.refresh();
   };
 
   // Guardar contador facturas
@@ -259,6 +294,7 @@ export default function ConfiguracionPanel({
     { id: "series",    label: "Series facturación",     icon: <CreditCard size={15} /> },
     { id: "servicios", label: "Tipos de servicio",      icon: <Wrench size={15} /> },
     { id: "contador",  label: "Contador facturas",      icon: <Hash size={15} /> },
+    { id: "verifactu", label: "Veri*Factu",              icon: <Shield size={15} /> },
   ];
 
   const showSaveButton   = ["perfil", "fiscal"].includes(pestana);
@@ -284,6 +320,13 @@ export default function ConfiguracionPanel({
             className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer">
             {saved ? <Check size={15} /> : <Save size={15} />}
             {saved ? "¡Guardado!" : loading ? "Guardando..." : "Guardar cambios"}
+          </button>
+        )}
+        {pestana === "verifactu" && (
+          <button onClick={handleSaveVerifactu} disabled={savingVerifactu}
+            className="flex items-center gap-2 bg-[#0B1120] text-white rounded-lg px-5 py-2.5 text-sm font-medium hover:bg-[#162030] transition-colors disabled:opacity-50 cursor-pointer">
+            {savedVerifactu ? <Check size={15} /> : <Save size={15} />}
+            {savedVerifactu ? "¡Guardado!" : savingVerifactu ? "Guardando..." : "Guardar cambios"}
           </button>
         )}
       </div>
@@ -789,6 +832,112 @@ export default function ConfiguracionPanel({
               <div className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">Atención</div>
               <p className="text-xs text-amber-700 leading-relaxed">
                 Modificar el contador manualmente puede generar números duplicados. Úsalo solo para la configuración inicial.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pestaña Veri*Factu / RRSIF */}
+      {pestana === "verifactu" && (
+        <div className="grid grid-cols-3 gap-6">
+          <div className="col-span-2 space-y-6">
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                <div className="w-8 h-8 rounded-lg bg-blue-50 flex items-center justify-center">
+                  <Shield size={15} className="text-blue-600" />
+                </div>
+                <h2 className="text-sm font-semibold text-gray-700">Facturación electrónica (Veri*Factu / RRSIF)</h2>
+              </div>
+              <div className="p-5 space-y-5">
+                <p className="text-xs text-gray-400 leading-relaxed">
+                  Estos datos dependen de lo que confirme tu gestoría (régimen fiscal exacto, modalidad y plazo
+                  aplicable). Cada empresa puede tener respuestas distintas, así que esta configuración es
+                  independiente por empresa.
+                </p>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                      Régimen fiscal
+                    </label>
+                    <select value={verifactu.regimenFiscalVerifactu}
+                      onChange={(e) => setVField("regimenFiscalVerifactu", e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white">
+                      <option value="">Sin definir todavía</option>
+                      <option value="sociedad">Sociedad (Impuesto sobre Sociedades)</option>
+                      <option value="autonomo">Autónomo / IRPF</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                      Modalidad elegida
+                    </label>
+                    <select value={verifactu.verifactuModalidad}
+                      onChange={(e) => setVField("verifactuModalidad", e.target.value)}
+                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white">
+                      <option value="">Sin decidir todavía</option>
+                      <option value="verifactu">Veri*Factu (envío en tiempo real a la AEAT)</option>
+                      <option value="no_verifactu">No Veri*Factu (firma local + registro inmutable)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Fecha límite aplicable a esta empresa
+                  </label>
+                  <input type="date" value={verifactu.verifactuFechaLimite}
+                    onChange={(e) => setVField("verifactuFechaLimite", e.target.value)}
+                    className="w-full max-w-xs px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                  <p className="text-xs text-gray-400 mt-1.5">
+                    Orientativo: 1 de enero de 2027 para sociedades, 1 de julio de 2027 para autónomos y el resto
+                    de obligados (Real Decreto-ley 15/2025). Confírmalo con tu gestoría.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Notas de la gestoría
+                  </label>
+                  <textarea value={verifactu.verifactuNotasGestoria}
+                    onChange={(e) => setVField("verifactuNotasGestoria", e.target.value)}
+                    rows={4} placeholder="Respuestas, matices o instrucciones que os dé la gestoría sobre este tema..."
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white resize-none" />
+                </div>
+
+                <div className="flex items-start gap-3 pt-2 border-t border-gray-100">
+                  <input type="checkbox" id="facturacionInmutable"
+                    checked={verifactu.facturacionInmutableActiva}
+                    onChange={(e) => setVField("facturacionInmutableActiva", e.target.checked)}
+                    className="mt-0.5 w-4 h-4 accent-[#0B1120] cursor-pointer" />
+                  <label htmlFor="facturacionInmutable" className="text-sm text-gray-700 cursor-pointer">
+                    <span className="font-medium">Activar inmutabilidad de facturas emitidas.</span>{" "}
+                    <span className="text-gray-400">
+                      A partir de que actives esto, los importes de una factura ya emitida no se podrán editar —
+                      cualquier corrección deberá hacerse mediante un Abono (factura rectificativa). Actívalo solo
+                      cuando tu gestoría confirme que debéis empezar a operar así.
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="bg-amber-50 rounded-xl border border-amber-100 p-5">
+              <div className="text-xs font-medium text-amber-600 uppercase tracking-wide mb-2">Estado técnico</div>
+              <p className="text-xs text-amber-700 leading-relaxed">
+                La aplicación ya calcula y guarda la huella (hash encadenado) de cada factura y abono que se emite,
+                de forma invisible, preparando el terreno para Veri*Factu. Falta activar el envío a la AEAT o la
+                firma local una vez la gestoría confirme la modalidad y el certificado a usar.
+              </p>
+            </div>
+            <div className="bg-blue-50 rounded-xl border border-blue-100 p-5">
+              <div className="text-xs font-medium text-blue-600 uppercase tracking-wide mb-2">Recordatorio</div>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                Hay un listado completo de preguntas para la gestoría sobre este tema — pídeselo a quien administre
+                la aplicación si no lo tienes a mano.
               </p>
             </div>
           </div>

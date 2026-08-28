@@ -21,6 +21,9 @@ export async function GET() {
         provincia: true, telefono: true, emailFacturacion: true,
         iban: true, precioHora: true, precioPorKm: true,
         logoBase64: true, textoRgpd: true,
+        facturacionInmutableActiva: true, regimenFiscalVerifactu: true,
+        verifactuModalidad: true, verifactuFechaLimite: true,
+        verifactuNotasGestoria: true,
       },
     }),
   ]);
@@ -40,6 +43,8 @@ export async function PUT(req: NextRequest) {
     nombreFiscal, cifNif, direccionFiscal, codigoPostal,
     ciudad, provincia, telefono, emailFacturacion, iban,
     precioHora, precioPorKm, logoBase64, textoRgpd,
+    facturacionInmutableActiva, regimenFiscalVerifactu,
+    verifactuModalidad, verifactuFechaLimite, verifactuNotasGestoria,
   } = body;
 
   const [usuario, empresa] = await Promise.all([
@@ -62,6 +67,13 @@ export async function PUT(req: NextRequest) {
         ...(precioPorKm      !== undefined && { precioPorKm: parseFloat(precioPorKm) }),
         ...(logoBase64       !== undefined && { logoBase64 }),
         ...(textoRgpd        !== undefined && { textoRgpd }),
+        ...(facturacionInmutableActiva !== undefined && { facturacionInmutableActiva }),
+        ...(regimenFiscalVerifactu     !== undefined && { regimenFiscalVerifactu }),
+        ...(verifactuModalidad         !== undefined && { verifactuModalidad }),
+        ...(verifactuFechaLimite       !== undefined && {
+          verifactuFechaLimite: verifactuFechaLimite ? new Date(verifactuFechaLimite) : null,
+        }),
+        ...(verifactuNotasGestoria     !== undefined && { verifactuNotasGestoria }),
       },
     }),
   ]);

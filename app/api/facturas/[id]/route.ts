@@ -57,16 +57,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   const body      = await req.json();
   const { estado, vencimiento, notas, tipoDescuento, descuentoValor } = body;
 
-  const factura = await prisma.factura.findFirst({
-    where: { id, empresaId },
-  });
+  const [factura, empresa] = await Promise.all([
+    prisma.factura.findFirst({ where: { id, empresaId } }),
+    prisma.empresa.findUnique({ where: { id: empresaId }, select: { facturacionInmutableActiva: true } }),
+  ]);
   if (!factura) {
     return NextResponse.json({ error: "Factura no encontrada" }, { status: 404 });
   }
 
+  // Veri*Factu / RRSIF: una vez activada la inmutabilidad para esta empresa
+  // (Configuración → Veri*Factu), los importes de una factura ya emitida no
+  // se pueden modificar — cualquier corrección debe hacerse con un Abono
+  // (factura rectificativa), que es lo que exige la normativa.
+  const tocaImporte = tipoDescuento !== undefined || descuentoValor !== undefined;
+  if (tocaImporte && empresa?.facturacionInmutableActiva) {
+    return NextResponse.json(
+      {
+        error:
+          "Esta factura ya está emitida y la empresa tiene activada la inmutabilidad de facturación (Veri*Factu). " +
+          "Para corregir el importe, genera un Abono (factura rectificativa) en lugar de editar esta factura.",
+      },
+      { status: 409 }
+    );
+  }
+
   let updateData: any = {};
 
-  if (tipoDescuento !== undefined || descuentoValor !== undefined) {
+  if (tocaImporte) {
     const nuevoTipo  = tipoDescuento  ?? factura.tipoDescuento;
     const nuevoValor = descuentoValor ?? factura.descuentoValor;
     let descuento = 0;
