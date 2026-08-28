@@ -2,11 +2,12 @@
 
 import { useEffect } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { signOut } from "next-auth/react";
 import Link from "next/link";
 import {
   LayoutDashboard, Users, Wrench,
   ClipboardList, FileText, ShoppingCart,
-  Settings, UserCog, ShieldCheck, FileCheck,
+  Settings, UserCog, ShieldCheck, FileCheck, LogOut,
 } from "lucide-react";
 
 interface Props {
@@ -153,7 +154,7 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
 
       {/* Usuario */}
       <div className="px-4 py-4 border-t border-[#1e2d42]">
-        <div className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-[#111827] cursor-pointer">
+        <div className="flex items-center gap-3 px-2 py-2 rounded-lg">
           <div className="w-8 h-8 rounded-full bg-[#00C2FF] flex items-center justify-center text-[#0B1120] text-sm font-bold flex-shrink-0">
             {userName?.charAt(0).toUpperCase()}
           </div>
@@ -163,6 +164,14 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
               {ROL_LABELS[rol ?? ""] ?? "Usuario"}
             </div>
           </div>
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-[#6a8aaa] hover:text-white hover:bg-[#111827] transition-colors flex-shrink-0 cursor-pointer"
+            title="Cerrar sesión"
+            aria-label="Cerrar sesión"
+          >
+            <LogOut className="w-4 h-4" />
+          </button>
         </div>
       </div>
     </aside>
