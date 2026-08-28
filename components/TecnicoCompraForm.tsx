@@ -286,7 +286,7 @@ export default function TecnicoCompraForm({
             return (
               <div key={l._key} className="border border-gray-100 rounded-lg p-3 relative bg-gray-50/40">
                 {lineas.length > 1 && (
-                  <button type="button" onClick={() => removeLinea(l._key)} className="absolute top-2 right-2 text-gray-300">
+                  <button type="button" onClick={() => removeLinea(l._key)} className="absolute top-2 right-2 z-20 text-gray-300">
                     <Trash2 size={15} />
                   </button>
                 )}
