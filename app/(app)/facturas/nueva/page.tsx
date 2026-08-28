@@ -25,6 +25,7 @@ export default async function NuevaFacturaPage({
         id: true, nombre: true,
         precioHoraEspecial:  true,
         precioPorKmEspecial: true,
+        plazoPagoDias:       true,
       },
       orderBy: { nombre: "asc" },
     }),

@@ -25,6 +25,7 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
     cif:                 cliente.cif                 ?? "",
     direccionFacturacion:cliente.direccionFacturacion ?? "",
     formaPago:           cliente.formaPago            ?? "Transferencia bancaria",
+    plazoPagoDias:       cliente.plazoPagoDias != null ? String(cliente.plazoPagoDias) : "",
     email:               cliente.email               ?? "",
     telefono:            cliente.telefono             ?? "",
     tipo:                cliente.tipo                ?? "empresa",
@@ -55,6 +56,7 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
         cif:                 form.cif,
         direccionFacturacion:form.direccionFacturacion || null,
         formaPago:           form.formaPago,
+        plazoPagoDias:       form.plazoPagoDias !== "" ? parseInt(form.plazoPagoDias) : null,
         email:               form.email               || null,
         telefono:            form.telefono             || null,
         tipo:                form.tipo,
@@ -211,6 +213,24 @@ export default function EditarClienteForm({ cliente }: { cliente: any }) {
                       <option key={f} value={f}>{f}</option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
+                    Plazo de pago
+                  </label>
+                  <select value={form.plazoPagoDias}
+                    onChange={(e) => setField("plazoPagoDias", e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
+                    <option value="">Sin definir (vencimiento manual)</option>
+                    <option value="0">Al contado</option>
+                    <option value="15">15 días</option>
+                    <option value="30">30 días</option>
+                    <option value="45">45 días</option>
+                    <option value="60">60 días</option>
+                    <option value="90">90 días</option>
+                  </select>
+                  <p className="text-xs text-gray-400 mt-1">Al facturar a este cliente, la fecha de vencimiento se calculará sola.</p>
                 </div>
 
                 <div>

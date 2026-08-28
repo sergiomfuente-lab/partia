@@ -8,7 +8,7 @@ import {
   Wrench, Package, CheckSquare, Square,
 } from "lucide-react";
 
-type Cliente      = { id: string; nombre: string; precioHoraEspecial: number | null; precioPorKmEspecial: number | null };
+type Cliente      = { id: string; nombre: string; precioHoraEspecial: number | null; precioPorKmEspecial: number | null; plazoPagoDias: number | null };
 type TipoServicio = { id: string; nombre: string; unidad: string };
 type Serie        = { id: string; nombre: string; prefijo: string; predeterminada: boolean };
 type Orden        = {
@@ -26,6 +26,15 @@ type LineaRepuesto = { _key: string; referencia: string; descripcion: string; ca
 
 const uid = () => Math.random().toString(36).slice(2, 9);
 const hoy = () => new Date().toISOString().split("T")[0];
+
+// Calcula la fecha de vencimiento sumando el plazo de pago (en días) del
+// cliente a la fecha de la factura, en formato yyyy-mm-dd para el <input type="date">.
+function calcularVencimiento(fecha: string, plazoPagoDias: number | null | undefined): string {
+  if (plazoPagoDias == null || !fecha) return "";
+  const base = new Date(`${fecha}T00:00:00`);
+  base.setDate(base.getDate() + plazoPagoDias);
+  return base.toISOString().split("T")[0];
+}
 
 export default function NuevaFacturaForm({
   clientes, tiposServicio, series, serieInicial,
@@ -67,10 +76,19 @@ export default function NuevaFacturaForm({
 
   const setField = (f: string, v: string) => setForm((p) => ({ ...p, [f]: v }));
 
+  // El vencimiento se recalcula solo a partir del plazo de pago del cliente
+  // (fecha + X días) mientras el usuario no lo edite a mano.
+  const [vencimientoManual, setVencimientoManual] = useState(false);
+
   const clienteActual   = clientes.find((c) => c.id === form.clienteId);
   const precioHora      = clienteActual?.precioHoraEspecial  ?? precioHoraDefault;
   const precioPorKm     = clienteActual?.precioPorKmEspecial ?? precioPorKmDefault;
   const serieActual     = series.find((s) => s.id === form.serieId);
+
+  useEffect(() => {
+    if (vencimientoManual) return;
+    setForm((p) => ({ ...p, vencimiento: calcularVencimiento(p.fecha, clienteActual?.plazoPagoDias) }));
+  }, [form.clienteId, form.fecha, clienteActual?.plazoPagoDias, vencimientoManual]);
 
   // Órdenes filtradas por cliente
   const ordenesFiltradas = ordenesSinFactura.filter(
@@ -318,10 +336,24 @@ export default function NuevaFacturaForm({
                       className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
                   </div>
                   <div>
-                    <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">Vencimiento</label>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide">Vencimiento</label>
+                      {vencimientoManual && clienteActual?.plazoPagoDias != null && (
+                        <button type="button"
+                          onClick={() => setVencimientoManual(false)}
+                          className="text-xs text-[#00C2FF] hover:underline cursor-pointer">
+                          Calcular por plazo del cliente
+                        </button>
+                      )}
+                    </div>
                     <input type="date" value={form.vencimiento}
-                      onChange={(e) => setField("vencimiento", e.target.value)}
+                      onChange={(e) => { setField("vencimiento", e.target.value); setVencimientoManual(true); }}
                       className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white" />
+                    {!vencimientoManual && clienteActual?.plazoPagoDias != null && (
+                      <p className="text-xs text-gray-400 mt-1">
+                        Calculado automáticamente: {clienteActual.plazoPagoDias === 0 ? "al contado" : `pago a ${clienteActual.plazoPagoDias} días`}.
+                      </p>
+                    )}
                   </div>
                 </div>
               </div>

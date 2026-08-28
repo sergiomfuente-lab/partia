@@ -17,6 +17,7 @@ export default function NuevoClientePage() {
     tipo: "empresa",
     direccionFacturacion: "",
     formaPago: "Transferencia bancaria",
+    plazoPagoDias: "30",
     observaciones: "",
     precioHoraEspecial: "",
   });
@@ -100,6 +101,19 @@ export default function NuevoClientePage() {
                   <option value="Cheque">Cheque</option>
                   <option value="Domiciliación bancaria">Domiciliación bancaria</option>
                 </select>
+              </div>
+              <div>
+                <label className="block text-sm text-gray-600 mb-1">Plazo de pago</label>
+                <select name="plazoPagoDias" value={form.plazoPagoDias} onChange={handleChange} className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:border-[#00C2FF] bg-gray-50">
+                  <option value="">Sin definir (vencimiento manual)</option>
+                  <option value="0">Al contado</option>
+                  <option value="15">15 días</option>
+                  <option value="30">30 días</option>
+                  <option value="45">45 días</option>
+                  <option value="60">60 días</option>
+                  <option value="90">90 días</option>
+                </select>
+                <p className="text-xs text-gray-400 mt-1">Al facturar a este cliente, la fecha de vencimiento se calculará sola.</p>
               </div>
               <div>
                 <label className="block text-sm text-gray-600 mb-1">Precio hora especial (€/h)</label>

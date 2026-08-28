@@ -126,6 +126,7 @@ model Cliente {
   cif                  String?
   direccionFacturacion String?
   formaPago            String?       @default("Transferencia bancaria")
+  plazoPagoDias        Int?
   email                String?
   telefono             String?
   tipo                 String        @default("empresa")

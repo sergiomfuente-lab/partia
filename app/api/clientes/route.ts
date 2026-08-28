@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const {
     nombre, nombreComercial, razonSocial, cif, direccionFacturacion,
-    formaPago, email, telefono, tipo,
+    formaPago, plazoPagoDias, email, telefono, tipo,
     observaciones, precioHoraEspecial, precioPorKmEspecial,
   } = body;
 
@@ -67,7 +67,10 @@ export async function POST(req: NextRequest) {
   const cliente = await prisma.cliente.create({
     data: {
       nombre, nombreComercial, razonSocial, cif, direccionFacturacion,
-      formaPago, email, telefono,
+      formaPago,
+      plazoPagoDias: plazoPagoDias !== undefined && plazoPagoDias !== null && plazoPagoDias !== ""
+        ? parseInt(plazoPagoDias) : null,
+      email, telefono,
       tipo:               tipo ?? "empresa",
       observaciones,
       precioHoraEspecial: precioHoraEspecial  ? parseFloat(precioHoraEspecial)  : null,

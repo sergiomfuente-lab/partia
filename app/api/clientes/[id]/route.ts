@@ -45,6 +45,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       ...(body.cif                  !== undefined && { cif:                  body.cif }),
       ...(body.direccionFacturacion !== undefined && { direccionFacturacion: body.direccionFacturacion }),
       ...(body.formaPago            !== undefined && { formaPago:            body.formaPago }),
+      ...(body.plazoPagoDias        !== undefined && { plazoPagoDias:        body.plazoPagoDias === "" || body.plazoPagoDias === null ? null : parseInt(body.plazoPagoDias) }),
       ...(body.email                !== undefined && { email:                body.email }),
       ...(body.telefono             !== undefined && { telefono:             body.telefono }),
       ...(body.tipo                 !== undefined && { tipo:                 body.tipo }),

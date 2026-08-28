@@ -188,6 +188,12 @@ export default function ClienteDetalle({ cliente }: Props) {
                   <div className="text-sm font-medium text-gray-800">{cliente.formaPago || "—"}</div>
                 </div>
                 <div>
+                  <div className="text-xs text-gray-400 mb-1">Plazo de pago</div>
+                  <div className="text-sm font-medium text-gray-800">
+                    {cliente.plazoPagoDias == null ? "Sin definir" : cliente.plazoPagoDias === 0 ? "Al contado" : `${cliente.plazoPagoDias} días`}
+                  </div>
+                </div>
+                <div>
                   <div className="text-xs text-gray-400 mb-1">Precio hora especial</div>
                   <div className="text-sm font-medium text-gray-800">
                     {cliente.precioHoraEspecial ? `${cliente.precioHoraEspecial}€/h` : "Precio estándar"}
