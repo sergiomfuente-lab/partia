@@ -20,6 +20,13 @@ export default async function MaquinaDetallePage({ params }: { params: Promise<{
           _count: { select: { repuestos: true } },
         },
       },
+      historialHoras: {
+        orderBy: { fecha: "desc" },
+        include: {
+          orden:   { select: { id: true, numero: true } },
+          usuario: { select: { nombre: true } },
+        },
+      },
     },
   });
 

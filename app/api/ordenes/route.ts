@@ -122,17 +122,5 @@ export async function POST(req: NextRequest) {
     });
   });
 
-  // Actualizar horas máquina
-  const horasManoObra = (servicios ?? [])
-    .filter((s: any) => s.esManoObra)
-    .reduce((acc: number, s: any) => acc + (s.cantidad ?? 0), 0);
-
-  if (horasManoObra > 0) {
-    await prisma.maquina.update({
-      where: { id: maquinaId },
-      data:  { horasActuales: { increment: horasManoObra } },
-    });
-  }
-
   return NextResponse.json(orden, { status: 201 });
 }

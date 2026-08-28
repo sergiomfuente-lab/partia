@@ -69,6 +69,7 @@ model Usuario {
   ordenesAsignadas    Orden[]
   comprasRegistradas  Compra[]
   facturasPagadas     Factura[]
+  lecturasHorasMaquina HistorialHorasMaquina[]
 }
 
 model PlazoPago {
@@ -80,6 +81,24 @@ model PlazoPago {
   createdAt DateTime @default(now())
 
   @@unique([empresaId, dias])
+}
+
+// Registra cada lectura del contador de horas de una maquina (odometro).
+// Se crea una entrada cada vez que un tecnico introduce las horas actuales
+// al empezar a ejecutar una orden; Maquina.horasActuales siempre refleja
+// la ultima lectura, y esta tabla guarda el historico completo.
+model HistorialHorasMaquina {
+  id              String   @id @default(cuid())
+  maquinaId       String
+  maquina         Maquina  @relation(fields: [maquinaId], references: [id])
+  horas           Float
+  horasAnteriores Float?
+  fecha           DateTime @default(now())
+  ordenId         String?
+  orden           Orden?   @relation(fields: [ordenId], references: [id])
+  usuarioId       String?
+  usuario         Usuario? @relation(fields: [usuarioId], references: [id])
+  createdAt       DateTime @default(now())
 }
 
 model ContadorFactura {
@@ -172,6 +191,7 @@ model Maquina {
   cliente        Cliente       @relation(fields: [clienteId], references: [id])
   ordenes        Orden[]
   presupuestos   Presupuesto[]
+  historialHoras HistorialHorasMaquina[]
   createdAt      DateTime      @default(now())
 }
 
@@ -207,6 +227,8 @@ model Orden {
   tecnicoId           String?
   tecnico             Usuario?          @relation(fields: [tecnicoId], references: [id])
   horasTrabajo        Float             @default(0)
+  horasMaquinaRegistradas Float?
+  historialHoras      HistorialHorasMaquina[]
   sesionesTrabajo     SesionTrabajo[]
   servicios           Servicio[]
   serviciosLibres     ServicioLibre[]

@@ -39,7 +39,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
     fecha, direccionReparacion, trabajosRealizados,
     observaciones, estado, servicios, serviciosLibres, repuestos,
     firmaDni, firmaObservaciones, firmaBase64,
-    mostrarPrecios, tecnicoId,
+    mostrarPrecios, tecnicoId, horasMaquina,
   } = body;
 
   const orden = await prisma.orden.findFirst({
@@ -53,6 +53,33 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
   // cancelar) cierra la sesion abierta y suma sus horas a Orden.horasTrabajo.
   const entrandoEnCurso   = estado !== undefined && estado === "en_curso" && orden.estado !== "en_curso";
   const saliendoDeEnCurso = estado !== undefined && estado !== "en_curso" && orden.estado === "en_curso";
+
+  // Al ejecutar la orden por primera vez (entrar en "en_curso") es obligatorio
+  // registrar las horas actuales de la maquina; quedan guardadas en el
+  // historico y sustituyen el valor mostrado en la ficha de la maquina.
+  const requiereHorasMaquina = entrandoEnCurso && orden.horasMaquinaRegistradas == null;
+  let horasMaquinaNum: number | null = null;
+  let maquinaActual: { horasActuales: number } | null = null;
+
+  if (requiereHorasMaquina) {
+    horasMaquinaNum = typeof horasMaquina === "number" ? horasMaquina : parseFloat(horasMaquina);
+    if (horasMaquina === undefined || horasMaquina === null || horasMaquina === "" || isNaN(horasMaquinaNum)) {
+      return NextResponse.json(
+        { error: "Debes indicar las horas actuales de la máquina para poner la orden en curso." },
+        { status: 400 }
+      );
+    }
+    maquinaActual = await prisma.maquina.findUnique({
+      where:  { id: orden.maquinaId },
+      select: { horasActuales: true },
+    });
+    if (maquinaActual && horasMaquinaNum < maquinaActual.horasActuales) {
+      return NextResponse.json(
+        { error: `Las horas no pueden ser inferiores a las horas actuales de la máquina (${maquinaActual.horasActuales} h).` },
+        { status: 400 }
+      );
+    }
+  }
 
   const updated = await prisma.$transaction(async (tx) => {
     let incrementoHoras = 0;
@@ -76,6 +103,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       }
     }
 
+    if (requiereHorasMaquina && horasMaquinaNum !== null) {
+      await tx.historialHorasMaquina.create({
+        data: {
+          maquinaId:       orden.maquinaId,
+          horas:           horasMaquinaNum,
+          horasAnteriores: maquinaActual?.horasActuales ?? null,
+          ordenId:         id,
+          usuarioId:       session.user!.id,
+        },
+      });
+      await tx.maquina.update({
+        where: { id: orden.maquinaId },
+        data:  { horasActuales: horasMaquinaNum },
+      });
+    }
+
     return tx.orden.update({
       where: { id },
       data: {
@@ -84,6 +127,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
         ...(trabajosRealizados  !== undefined && { trabajosRealizados }),
         ...(observaciones       !== undefined && { observaciones }),
         ...(estado              !== undefined && { estado }),
+        ...(requiereHorasMaquina && horasMaquinaNum !== null && { horasMaquinaRegistradas: horasMaquinaNum }),
         ...(tecnicoId           !== undefined && { tecnicoId: tecnicoId || null }),
         ...(mostrarPrecios      !== undefined && { mostrarPrecios }),
         ...(firmaDni            !== undefined && { firmaDni }),
@@ -127,7 +171,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
       },
       include: {
         cliente:         { select: { id: true, nombre: true } },
-        maquina:         { select: { id: true, marca: true, modelo: true } },
+        maquina:         { select: { id: true, marca: true, modelo: true, horasActuales: true } },
         tecnico:         { select: { id: true, nombre: true } },
         servicios:       { include: { tipoServicio: true } },
         serviciosLibres: true,

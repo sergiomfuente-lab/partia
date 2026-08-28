@@ -196,6 +196,46 @@ export default function MaquinaDetalle({ maquina }: { maquina: any }) {
               <p className="text-sm text-gray-600 leading-relaxed">{maquina.observaciones}</p>
             </div>
           )}
+
+          {/* Historial de horas del contador */}
+          <div className="bg-white rounded-xl border border-gray-100 p-5">
+            <h3 className="text-sm font-semibold text-gray-700 mb-3 pb-3 border-b border-gray-100 flex items-center gap-2">
+              <Clock size={15} className="text-gray-400" />
+              Historial de horas
+            </h3>
+            {(!maquina.historialHoras || maquina.historialHoras.length === 0) ? (
+              <p className="text-xs text-gray-400">
+                Todavía no hay lecturas del contador. Se registrarán la próxima vez que un técnico empiece una orden en esta máquina.
+              </p>
+            ) : (
+              <div className="space-y-3 max-h-72 overflow-y-auto pr-1">
+                {maquina.historialHoras.map((h: any) => (
+                  <div key={h.id} className="flex items-start justify-between text-sm">
+                    <div>
+                      <div className="font-medium text-gray-800">
+                        {h.horas.toLocaleString("es-ES")} h
+                        {h.horasAnteriores != null && (
+                          <span className="text-xs text-gray-400 font-normal"> (antes {h.horasAnteriores.toLocaleString("es-ES")} h)</span>
+                        )}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {new Date(h.fecha).toLocaleDateString("es-ES")}
+                        {h.usuario?.nombre && ` · ${h.usuario.nombre}`}
+                      </div>
+                    </div>
+                    {h.orden && (
+                      <Link
+                        href={`/ordenes/${h.orden.id}`}
+                        className="text-xs text-[#00C2FF] hover:underline font-mono shrink-0 ml-2"
+                      >
+                        {h.orden.numero}
+                      </Link>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Columna derecha — historial órdenes */}

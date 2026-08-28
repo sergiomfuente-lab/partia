@@ -39,6 +39,13 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
   const [togglingPrecios, setTogglingPrecios] = useState(false);
   const [fotoAmpliada, setFotoAmpliada]       = useState<string | null>(null);
 
+  const necesitaHorasMaquina = orden.horasMaquinaRegistradas == null;
+  const [mostrarHorasMaquina, setMostrarHorasMaquina] = useState(false);
+  const [horasMaquinaInput, setHorasMaquinaInput]     = useState(
+    orden.maquina?.horasActuales != null ? String(orden.maquina.horasActuales) : ""
+  );
+  const [errorHorasMaquina, setErrorHorasMaquina]     = useState("");
+
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const dibujandoRef   = useRef(false);
   const ultimoPuntoRef = useRef<{ x: number; y: number } | null>(null);
@@ -134,6 +141,12 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
   };
 
   const handleEstado = async (nuevoEstado: string) => {
+    if (nuevoEstado === "en_curso" && necesitaHorasMaquina) {
+      setErrorHorasMaquina("");
+      setHorasMaquinaInput(orden.maquina?.horasActuales != null ? String(orden.maquina.horasActuales) : "");
+      setMostrarHorasMaquina(true);
+      return;
+    }
     setCambiandoEstado(true);
     await fetch(`/api/ordenes/${orden.id}`, {
       method:  "PUT",
@@ -141,6 +154,33 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
       body:    JSON.stringify({ estado: nuevoEstado }),
     });
     setCambiandoEstado(false);
+    router.refresh();
+  };
+
+  const handleConfirmarHorasMaquina = async () => {
+    setErrorHorasMaquina("");
+    const valor = parseFloat(horasMaquinaInput.replace(",", "."));
+    if (horasMaquinaInput.trim() === "" || isNaN(valor)) {
+      setErrorHorasMaquina("Indica un número de horas válido.");
+      return;
+    }
+    if (orden.maquina?.horasActuales != null && valor < orden.maquina.horasActuales) {
+      setErrorHorasMaquina(`Las horas no pueden ser inferiores a las horas actuales de la máquina (${orden.maquina.horasActuales} h).`);
+      return;
+    }
+    setCambiandoEstado(true);
+    const res = await fetch(`/api/ordenes/${orden.id}`, {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json" },
+      body:    JSON.stringify({ estado: "en_curso", horasMaquina: valor }),
+    });
+    setCambiandoEstado(false);
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setErrorHorasMaquina(data.error ?? "No se pudo guardar. Inténtalo de nuevo.");
+      return;
+    }
+    setMostrarHorasMaquina(false);
     router.refresh();
   };
 
@@ -249,6 +289,52 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
       </div>
 
       {/* Modal firma */}
+      {mostrarHorasMaquina && (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm">
+            <div className="px-6 py-5 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-base font-semibold text-gray-900 flex items-center gap-2">
+                <Clock size={18} className="text-blue-600" />
+                Horas de la máquina
+              </h2>
+              <button
+                onClick={() => setMostrarHorasMaquina(false)}
+                className="text-gray-400 hover:text-gray-600 cursor-pointer text-xl leading-none"
+              >
+                &times;
+              </button>
+            </div>
+            <div className="p-6 space-y-3">
+              <p className="text-sm text-gray-500">
+                Antes de poner la orden en curso, indica las horas actuales que marca el contador de la máquina.
+                {orden.maquina?.horasActuales != null && (
+                  <> Última lectura registrada: <span className="font-medium text-gray-700">{orden.maquina.horasActuales} h</span>.</>
+                )}
+              </p>
+              {errorHorasMaquina && (
+                <div className="text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{errorHorasMaquina}</div>
+              )}
+              <input
+                type="number"
+                step="0.1"
+                placeholder="Horas actuales de la máquina"
+                value={horasMaquinaInput}
+                onChange={(e) => setHorasMaquinaInput(e.target.value)}
+                className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white"
+                autoFocus
+              />
+              <button
+                onClick={handleConfirmarHorasMaquina}
+                disabled={cambiandoEstado || horasMaquinaInput.trim() === ""}
+                className="w-full bg-[#00C2FF] text-[#0B1120] font-medium text-sm py-2.5 rounded-lg disabled:opacity-50"
+              >
+                {cambiandoEstado ? "Guardando..." : "Confirmar y poner en curso"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {mostrarFirma && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-lg">

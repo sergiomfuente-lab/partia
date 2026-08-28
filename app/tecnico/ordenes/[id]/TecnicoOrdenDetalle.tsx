@@ -294,10 +294,52 @@ export default function TecnicoOrdenDetalle({
       }),
     });
     setGuardando(false);
-    if (!res.ok) { setError("No se pudo guardar. Revisa la conexión e inténtalo de nuevo."); return false; }
+    if (!res.ok) {
+      const data = await res.json().catch(() => ({}));
+      setError(data.error ?? "No se pudo guardar. Revisa la conexión e inténtalo de nuevo.");
+      return false;
+    }
     setOkMsg("Guardado.");
     router.refresh();
     return true;
+  };
+
+  // ---- Horas de la máquina al empezar/reanudar la orden ----
+  const necesitaHorasMaquina = orden.horasMaquinaRegistradas == null;
+  const [mostrarHorasMaquina, setMostrarHorasMaquina] = useState(false);
+  const [horasMaquinaInput, setHorasMaquinaInput]     = useState(
+    orden.maquina?.horasActuales != null ? String(orden.maquina.horasActuales) : ""
+  );
+  const [guardandoHoras, setGuardandoHoras]           = useState(false);
+
+  const iniciarOEntrarEnCurso = async () => {
+    if (necesitaHorasMaquina) {
+      setError("");
+      setHorasMaquinaInput(orden.maquina?.horasActuales != null ? String(orden.maquina.horasActuales) : "");
+      setMostrarHorasMaquina(true);
+      return;
+    }
+    await handleEnCurso();
+  };
+
+  const handleConfirmarHorasMaquina = async () => {
+    setError("");
+    const valor = parseFloat(horasMaquinaInput.replace(",", "."));
+    if (horasMaquinaInput.trim() === "" || isNaN(valor)) {
+      setError("Indica un número de horas válido.");
+      return;
+    }
+    if (orden.maquina?.horasActuales != null && valor < orden.maquina.horasActuales) {
+      setError(`Las horas no pueden ser inferiores a las horas actuales de la máquina (${orden.maquina.horasActuales} h).`);
+      return;
+    }
+    setGuardandoHoras(true);
+    const ok = await guardarCambios({ estado: "en_curso", horasMaquina: valor });
+    setGuardandoHoras(false);
+    if (ok) {
+      setEstado("en_curso");
+      setMostrarHorasMaquina(false);
+    }
   };
 
   const handleEnCurso = async () => {
@@ -363,7 +405,7 @@ export default function TecnicoOrdenDetalle({
 
       {estado === "pendiente" && (
         <button
-          onClick={handleEnCurso}
+          onClick={iniciarOEntrarEnCurso}
           disabled={guardando}
           className="w-full mb-4 bg-blue-50 text-blue-700 border border-blue-200 font-medium text-sm py-2.5 rounded-lg active:opacity-80 disabled:opacity-50"
         >
@@ -383,7 +425,7 @@ export default function TecnicoOrdenDetalle({
 
       {estado === "pausado" && (
         <button
-          onClick={handleEnCurso}
+          onClick={iniciarOEntrarEnCurso}
           disabled={guardando}
           className="w-full mb-4 flex items-center justify-center gap-2 bg-blue-50 text-blue-700 border border-blue-200 font-medium text-sm py-2.5 rounded-lg active:opacity-80 disabled:opacity-50"
         >
@@ -681,6 +723,43 @@ export default function TecnicoOrdenDetalle({
       )}
 
       {/* Modal firma */}
+      {mostrarHorasMaquina && (
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-4">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Horas de la máquina</h3>
+              <button onClick={() => setMostrarHorasMaquina(false)}><X size={18} className="text-gray-400" /></button>
+            </div>
+            <p className="text-xs text-gray-500 mb-3">
+              Antes de empezar, indica las horas actuales que marca el contador de la máquina.
+              {orden.maquina?.horasActuales != null && (
+                <> Última lectura registrada: <span className="font-medium text-gray-700">{orden.maquina.horasActuales} h</span>.</>
+              )}
+            </p>
+            {error && (
+              <div className="mb-3 text-xs text-red-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">{error}</div>
+            )}
+            <input
+              type="number"
+              step="0.1"
+              inputMode="decimal"
+              placeholder="Horas actuales de la máquina"
+              value={horasMaquinaInput}
+              onChange={(e) => setHorasMaquinaInput(e.target.value)}
+              className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg mb-3"
+              autoFocus
+            />
+            <button
+              onClick={handleConfirmarHorasMaquina}
+              disabled={guardandoHoras || horasMaquinaInput.trim() === ""}
+              className="w-full bg-blue-600 text-white font-medium text-sm py-3 rounded-lg disabled:opacity-50"
+            >
+              {guardandoHoras ? "Guardando..." : "Confirmar y empezar a trabajar"}
+            </button>
+          </div>
+        </div>
+      )}
+
       {mostrarFirma && (
         <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-4">
           <div className="bg-white rounded-xl w-full max-w-md p-4">
