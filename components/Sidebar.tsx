@@ -7,7 +7,7 @@ import Link from "next/link";
 import {
   LayoutDashboard, Users, Wrench,
   ClipboardList, FileText, ShoppingCart,
-  Settings, UserCog, ShieldCheck, FileCheck, LogOut,
+  Settings, UserCog, ShieldCheck, FileCheck, LogOut, FileSpreadsheet,
 } from "lucide-react";
 
 interface Props {
@@ -93,6 +93,12 @@ export default function Sidebar({ userName, rol, empresaActivaId }: Props) {
       href:  "/compras",
       label: "Compras",
       icon:  <ShoppingCart className="w-4 h-4" />,
+      roles: ["superadmin", "administrador", "administrativo"],
+    },
+    {
+      href:  "/informes",
+      label: "Informes",
+      icon:  <FileSpreadsheet className="w-4 h-4" />,
       roles: ["superadmin", "administrador", "administrativo"],
     },
     {
