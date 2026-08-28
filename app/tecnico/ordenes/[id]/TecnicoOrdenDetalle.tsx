@@ -78,6 +78,13 @@ export default function TecnicoOrdenDetalle({
     (orden.lineasCompra ?? []).map((lc: any) => ({ ...lc, _key: uid() }))
   );
   const [mostrarCompra, setMostrarCompra] = useState(false);
+
+  // ---- Usar material del almacén (descuenta stock real) ----
+  const [productosStock, setProductosStock] = useState(productos);
+  const [usoProductoId, setUsoProductoId]   = useState("");
+  const [usoCantidad, setUsoCantidad]       = useState("1");
+  const [usandoStock, setUsandoStock]       = useState(false);
+  const [errorStock, setErrorStock]         = useState("");
   const [serviciosLibres, setServiciosLibres] = useState(
     (orden.serviciosLibres ?? []).map((s: any) => ({ ...s, _key: uid() }))
   );
@@ -207,6 +214,42 @@ export default function TecnicoOrdenDetalle({
 
     setMostrarCompra(false);
     setOkMsg("Compra registrada. Se ha añadido como recambio de la orden.");
+  };
+
+  const handleUsarStock = async () => {
+    setErrorStock("");
+    if (!usoProductoId) { setErrorStock("Selecciona un producto."); return; }
+    const cantidad = parseFloat(usoCantidad);
+    if (!cantidad || cantidad <= 0) { setErrorStock("Cantidad no válida."); return; }
+
+    setUsandoStock(true);
+    try {
+      const res = await fetch(`/api/productos/${usoProductoId}/salida`, {
+        method:  "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          cantidad,
+          ordenId: orden.id,
+          motivo:  `Usado en orden ${orden.numero}`,
+        }),
+      });
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error ?? "No se pudo descontar del stock.");
+      }
+      const data = await res.json();
+      if (data.repuestoCreado) {
+        setRepuestos((prev: any) => [...prev, { ...data.repuestoCreado, _key: uid() }]);
+      }
+      setProductosStock((prev: any) => prev.map((p: any) => (p.id === usoProductoId ? { ...p, stock: data.producto.stock } : p)));
+      setUsoProductoId("");
+      setUsoCantidad("1");
+      setOkMsg("Material descontado del almacén y añadido como recambio.");
+    } catch (err: any) {
+      setErrorStock(err.message ?? "Ha ocurrido un error.");
+    } finally {
+      setUsandoStock(false);
+    }
   };
 
   // ---- Servicios libres (trabajo / mano de obra suelta) ----
@@ -527,6 +570,41 @@ export default function TecnicoOrdenDetalle({
         )}
         <p className="text-[11px] text-gray-400 mt-3">
           Se añade automáticamente como recambio de la orden con el precio de venta que indiques.
+        </p>
+      </div>
+
+      {/* Usar material del almacén */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+        <h2 className="text-sm font-semibold text-gray-900 mb-3">Usar material del almacén</h2>
+        {productosStock.filter((p: any) => p.stock > 0).length === 0 ? (
+          <div className="text-xs text-gray-400 pb-1">No hay material con stock disponible en el almacén.</div>
+        ) : (
+          <>
+            <div className="grid grid-cols-3 gap-2 mb-2">
+              <select
+                value={usoProductoId}
+                onChange={(e) => setUsoProductoId(e.target.value)}
+                className="col-span-2 px-2.5 py-2 text-base border border-gray-200 rounded-lg bg-white text-gray-700"
+              >
+                <option value="">Selecciona un producto...</option>
+                {productosStock.filter((p: any) => p.stock > 0).map((p: any) => (
+                  <option key={p.id} value={p.id}>{p.nombre} ({p.stock} {p.unidad} disp.)</option>
+                ))}
+              </select>
+              <input type="number" min="0" step="1" placeholder="Cant."
+                value={usoCantidad}
+                onChange={(e) => setUsoCantidad(e.target.value)}
+                className="px-2.5 py-2 text-base border border-gray-200 rounded-lg bg-white" />
+            </div>
+            <button type="button" onClick={handleUsarStock} disabled={usandoStock || !usoProductoId}
+              className="w-full bg-gray-100 text-gray-700 font-medium text-sm py-2.5 rounded-lg active:opacity-80 disabled:opacity-50">
+              {usandoStock ? "Descontando..." : "Usar en esta orden"}
+            </button>
+            {errorStock && <div className="text-xs text-red-600 mt-2">{errorStock}</div>}
+          </>
+        )}
+        <p className="text-[11px] text-gray-400 mt-3">
+          Se descuenta del almacén al momento y se añade como recambio de la orden.
         </p>
       </div>
 

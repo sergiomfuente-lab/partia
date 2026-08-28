@@ -22,6 +22,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     return NextResponse.json({ error: `Stock insuficiente. Disponible: ${producto.stock}` }, { status: 400 });
   }
 
+  // Seguridad: si se indica una orden, comprobar que pertenece de verdad a
+  // la empresa del usuario (esta ruta la puede llamar también un técnico
+  // desde el móvil, al usar material del almacén en un trabajo).
+  if (ordenId) {
+    const ordenValida = await prisma.orden.findFirst({ where: { id: ordenId, empresaId }, select: { id: true } });
+    if (!ordenValida) {
+      return NextResponse.json({ error: "La orden indicada no es válida" }, { status: 400 });
+    }
+  }
+
   const resultado = await prisma.$transaction(async (tx) => {
     const updated = await tx.producto.update({
       where: { id },
@@ -40,8 +50,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     });
 
     // Si va a una orden, crear repuesto automáticamente
+    let repuestoCreado = null;
     if (ordenId) {
-      await tx.repuesto.create({
+      repuestoCreado = await tx.repuesto.create({
         data: {
           referencia:  producto.referencia  ?? null,
           descripcion: producto.nombre,
@@ -53,7 +64,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       });
     }
 
-    return { producto: updated, movimiento };
+    return { producto: updated, movimiento, repuestoCreado };
   });
 
   return NextResponse.json(resultado);

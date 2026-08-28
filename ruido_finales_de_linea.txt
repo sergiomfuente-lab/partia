@@ -49,7 +49,6 @@ app/api/presupuestos/[id]/route.ts
 app/api/presupuestos/contador/route.ts
 app/api/presupuestos/route.ts
 app/api/productos/[id]/route.ts
-app/api/productos/[id]/salida/route.ts
 app/api/productos/route.ts
 app/api/proveedores/[id]/route.ts
 app/api/proveedores/route.ts
