@@ -7,7 +7,7 @@ import {
   ArrowLeft, ClipboardList, Pencil, Download,
   CheckCircle2, Clock, AlertCircle, PlayCircle, PauseCircle,
   Building2, Calendar, Wrench, Package,
-  FileText, PenLine, Trash2,
+  FileText, PenLine, Trash2, Receipt, X,
 } from "lucide-react";
 
 const ESTADO_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
@@ -37,6 +37,7 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
   const [firmadoOk, setFirmadoOk]             = useState(!!orden.firmaBase64);
   const [mostrarPrecios, setMostrarPrecios]   = useState(orden.mostrarPrecios ?? true);
   const [togglingPrecios, setTogglingPrecios] = useState(false);
+  const [fotoAmpliada, setFotoAmpliada]       = useState<string | null>(null);
 
   const canvasRef      = useRef<HTMLCanvasElement>(null);
   const dibujandoRef   = useRef(false);
@@ -698,6 +699,57 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
             </div>
           )}
 
+          {/* Compras de materiales */}
+          {orden.lineasCompra?.length > 0 && (
+            <div className="bg-white rounded-xl border border-gray-100 overflow-hidden">
+              <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                <Receipt size={15} className="text-orange-500" />
+                <h3 className="text-sm font-semibold text-gray-700">Compras de materiales registradas</h3>
+                <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
+                  {orden.lineasCompra.length}
+                </span>
+              </div>
+              <div className="grid grid-cols-12 px-5 py-2 bg-gray-50 border-b border-gray-100">
+                <div className="col-span-4 text-xs text-gray-400 uppercase tracking-wide">Material</div>
+                <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide">Proveedor</div>
+                <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide">Técnico</div>
+                <div className="col-span-2 text-xs text-gray-400 uppercase tracking-wide text-center">Fecha</div>
+                <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-right">Coste</div>
+                <div className="col-span-1 text-xs text-gray-400 uppercase tracking-wide text-right">Ticket</div>
+              </div>
+              {orden.lineasCompra.map((lc: any) => {
+                const nombreProveedor = lc.compra?.proveedor?.nombre ?? lc.compra?.proveedorNombre ?? "—";
+                const fecha = lc.compra?.fecha
+                  ? new Date(lc.compra.fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "2-digit", year: "numeric" })
+                  : "—";
+                return (
+                  <div key={lc.id} className="grid grid-cols-12 px-5 py-3 border-b border-gray-50 items-center">
+                    <div className="col-span-4 text-sm font-medium text-gray-800 truncate">{lc.descripcion}</div>
+                    <div className="col-span-2 text-sm text-gray-500 truncate">{nombreProveedor}</div>
+                    <div className="col-span-2 text-sm text-gray-500 truncate">{lc.compra?.tecnico?.nombre ?? "—"}</div>
+                    <div className="col-span-2 text-sm text-gray-500 text-center">{fecha}</div>
+                    <div className="col-span-1 text-sm text-gray-700 text-right">
+                      {(lc.cantidad * lc.precioCoste).toFixed(2)} €
+                    </div>
+                    <div className="col-span-1 text-right">
+                      {lc.compra?.fotoTicketBase64 ? (
+                        <button type="button" onClick={() => setFotoAmpliada(lc.compra.fotoTicketBase64)}>
+                          <img
+                            src={lc.compra.fotoTicketBase64}
+                            alt="Ticket"
+                            className="w-8 h-8 rounded-md object-cover border border-gray-200 ml-auto"
+                          />
+                        </button>
+                      ) : (
+                        <span className="text-xs text-gray-300">—</span>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
           {/* Total */}
           <div className="bg-[#0B1120] rounded-xl p-5">
             <div className="space-y-2 mb-4">
@@ -724,6 +776,22 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
           </div>
         </div>
       </div>
+
+      {/* Foto de ticket ampliada */}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <button
+            onClick={() => setFotoAmpliada(null)}
+            className="absolute top-4 right-4 w-9 h-9 flex items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20"
+          >
+            <X size={18} />
+          </button>
+          <img src={fotoAmpliada} alt="Ticket ampliado" className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
+        </div>
+      )}
     </div>
   );
 }

@@ -13,6 +13,8 @@ type Producto  = { id: string; nombre: string; referencia?: string; descripcion?
 type Compra    = {
   id: string; fecha: string; numeroAlbaran?: string;
   proveedorNombre?: string; proveedor?: { id: string; nombre: string };
+  tecnico?: { id: string; nombre: string };
+  fotoTicketBase64?: string;
   total: number; observaciones?: string;
   lineas: LineaCompra[];
   _count: { lineas: number };
@@ -21,6 +23,7 @@ type LineaCompra = {
   id: string; descripcion: string; referencia?: string;
   cantidad: number; precioCoste: number; precioVenta: number;
   aStock: boolean; productoId?: string; ordenId?: string;
+  orden?: { id: string; numero: string };
 };
 type LineaForm = {
   _key:        string;
@@ -86,6 +89,7 @@ export default function ComprasPanel({
 
   // Detalle compra
   const [compraDetalle, setCompraDetalle] = useState<Compra | null>(null);
+  const [fotoAmpliada, setFotoAmpliada]   = useState<string | null>(null);
 
   // ---- Líneas de compra ----
   const addLinea = () => setLineas((prev) => [...prev, {
@@ -474,6 +478,20 @@ export default function ComprasPanel({
                   {/* Detalle expandible */}
                   {compraDetalle?.id === c.id && (
                     <div className="col-span-12 mt-3 bg-gray-50 rounded-lg p-4">
+                      {(c.tecnico || c.fotoTicketBase64) && (
+                        <div className="flex items-center justify-between mb-3 pb-3 border-b border-gray-200">
+                          <div className="text-xs text-gray-500">
+                            {c.tecnico
+                              ? <>Registrada por <span className="font-medium text-gray-700">{c.tecnico.nombre}</span> desde la app del técnico</>
+                              : "Registrada desde la oficina"}
+                          </div>
+                          {c.fotoTicketBase64 && (
+                            <button onClick={() => setFotoAmpliada(c.fotoTicketBase64!)} className="cursor-pointer">
+                              <img src={c.fotoTicketBase64} alt="Ticket" className="w-10 h-10 rounded-md object-cover border border-gray-200" />
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <table className="w-full text-sm">
                         <thead>
                           <tr className="border-b border-gray-200">
@@ -483,6 +501,7 @@ export default function ComprasPanel({
                             <th className="text-right text-xs text-gray-400 pb-2">P.Coste</th>
                             <th className="text-right text-xs text-gray-400 pb-2">P.Venta</th>
                             <th className="text-center text-xs text-gray-400 pb-2">A stock</th>
+                            <th className="text-left text-xs text-gray-400 pb-2">Orden</th>
                             <th className="text-right text-xs text-gray-400 pb-2">Total</th>
                           </tr>
                         </thead>
@@ -498,6 +517,11 @@ export default function ComprasPanel({
                                 <span className={`text-xs px-2 py-0.5 rounded-full ${l.aStock ? "bg-green-50 text-green-700" : "bg-gray-100 text-gray-500"}`}>
                                   {l.aStock ? "Sí" : "No"}
                                 </span>
+                              </td>
+                              <td className="py-2 text-gray-500">
+                                {l.orden ? (
+                                  <a href={`/ordenes/${l.orden.id}`} className="text-[#00C2FF] hover:underline">{l.orden.numero}</a>
+                                ) : "—"}
                               </td>
                               <td className="py-2 text-gray-800 font-medium text-right">
                                 {(l.cantidad * l.precioCoste).toFixed(2)} €
@@ -756,6 +780,16 @@ export default function ComprasPanel({
               ))
             )}
           </div>
+        </div>
+      )}
+
+      {/* Foto de ticket ampliada */}
+      {fotoAmpliada && (
+        <div
+          className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4"
+          onClick={() => setFotoAmpliada(null)}
+        >
+          <img src={fotoAmpliada} alt="Ticket ampliado" className="max-w-full max-h-full rounded-lg" onClick={(e) => e.stopPropagation()} />
         </div>
       )}
     </div>

@@ -17,7 +17,8 @@ export default async function ComprasPage() {
       where:   { empresaId },
       include: {
         proveedor: { select: { id: true, nombre: true } },
-        lineas:    true,
+        tecnico:   { select: { id: true, nombre: true } },
+        lineas:    { include: { orden: { select: { id: true, numero: true } } } },
         _count:    { select: { lineas: true } },
       },
       orderBy: { fecha: "desc" },

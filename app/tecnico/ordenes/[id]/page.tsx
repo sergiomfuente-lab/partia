@@ -12,7 +12,7 @@ export default async function TecnicoOrdenPage({ params }: { params: Promise<{ i
   const { id }    = await params;
   const empresaId = (session.user as any).empresaId;
 
-  const [orden, tiposServicio, empresa] = await Promise.all([
+  const [orden, tiposServicio, empresa, proveedores, productos] = await Promise.all([
     prisma.orden.findFirst({
       where: { id, empresaId },
       include: {
@@ -22,6 +22,17 @@ export default async function TecnicoOrdenPage({ params }: { params: Promise<{ i
         servicios:       { include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
         serviciosLibres: true,
         repuestos:       true,
+        lineasCompra: {
+          include: {
+            compra: {
+              include: {
+                proveedor: { select: { nombre: true } },
+                tecnico:   { select: { nombre: true } },
+              },
+            },
+          },
+          orderBy: { createdAt: "asc" },
+        },
       },
     }),
     prisma.tipoServicio.findMany({
@@ -31,6 +42,15 @@ export default async function TecnicoOrdenPage({ params }: { params: Promise<{ i
     prisma.empresa.findUnique({
       where:  { id: empresaId },
       select: { precioHora: true, precioPorKm: true },
+    }),
+    prisma.proveedor.findMany({
+      where:   { empresaId, activo: true },
+      select:  { id: true, nombre: true },
+      orderBy: { nombre: "asc" },
+    }),
+    prisma.producto.findMany({
+      where:   { empresaId, activo: true },
+      orderBy: { nombre: "asc" },
     }),
   ]);
 
@@ -42,6 +62,9 @@ export default async function TecnicoOrdenPage({ params }: { params: Promise<{ i
       tiposServicio={JSON.parse(JSON.stringify(tiposServicio))}
       precioHoraDefault={empresa?.precioHora   ?? 55}
       precioPorKmDefault={empresa?.precioPorKm ?? 0.35}
+      tecnicoId={session.user.id}
+      proveedores={JSON.parse(JSON.stringify(proveedores))}
+      productos={JSON.parse(JSON.stringify(productos))}
     />
   );
 }

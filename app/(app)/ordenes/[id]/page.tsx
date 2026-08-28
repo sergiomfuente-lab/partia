@@ -24,6 +24,17 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
       serviciosLibres: true,
       repuestos:       true,
       sesionesTrabajo: { orderBy: { inicio: "asc" } },
+      lineasCompra: {
+        include: {
+          compra: {
+            include: {
+              proveedor: { select: { nombre: true } },
+              tecnico:   { select: { nombre: true } },
+            },
+          },
+        },
+        orderBy: { createdAt: "asc" },
+      },
       factura: { select: { id: true, numero: true, estado: true } },
     },
   });

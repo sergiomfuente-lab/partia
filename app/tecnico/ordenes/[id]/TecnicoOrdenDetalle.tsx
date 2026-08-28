@@ -7,6 +7,7 @@ import {
   ArrowLeft, Clock, PlayCircle, PauseCircle, CheckCircle2, AlertCircle,
   Building2, Wrench, Phone, Plus, Trash2, PenLine, X,
 } from "lucide-react";
+import TecnicoCompraForm from "@/components/TecnicoCompraForm";
 
 const ESTADO_CONFIG: Record<string, { label: string; className: string; icon: React.ReactNode }> = {
   pendiente:  { label: "Pendiente",  className: "bg-yellow-50 text-yellow-700 border-yellow-200", icon: <Clock size={13} /> },
@@ -35,11 +36,17 @@ export default function TecnicoOrdenDetalle({
   tiposServicio,
   precioHoraDefault,
   precioPorKmDefault,
+  tecnicoId,
+  proveedores,
+  productos,
 }: {
   orden: any;
   tiposServicio: TipoServicio[];
   precioHoraDefault: number;
   precioPorKmDefault: number;
+  tecnicoId: string;
+  proveedores: { id: string; nombre: string }[];
+  productos: any[];
 }) {
   const router = useRouter();
 
@@ -67,6 +74,10 @@ export default function TecnicoOrdenDetalle({
   const [repuestos, setRepuestos] = useState(
     (orden.repuestos ?? []).map((r: any) => ({ ...r, _key: uid() }))
   );
+  const [comprasOrden, setComprasOrden] = useState(
+    (orden.lineasCompra ?? []).map((lc: any) => ({ ...lc, _key: uid() }))
+  );
+  const [mostrarCompra, setMostrarCompra] = useState(false);
   const [serviciosLibres, setServiciosLibres] = useState(
     (orden.serviciosLibres ?? []).map((s: any) => ({ ...s, _key: uid() }))
   );
@@ -169,6 +180,34 @@ export default function TecnicoOrdenDetalle({
     setRepuestos((prev: any) => prev.map((r: any) => r._key === key ? { ...r, [field]: value } : r));
   const removeRepuesto = (key: string) =>
     setRepuestos((prev: any) => prev.filter((r: any) => r._key !== key));
+
+  // ---- Compra de materiales ----
+  // Al registrar una compra ligada a esta orden, la API crea también un
+  // Repuesto correspondiente (para que entre en el presupuesto/factura) y
+  // lo devuelve junto con la compra: lo añadimos aquí al estado local para
+  // que aparezca al momento y no se pierda si luego se pulsa "Guardar
+  // cambios" (que reemplaza por completo la lista de repuestos).
+  const handleCompraGuardada = (compra: any) => {
+    const nuevasLineas = (compra.lineas ?? []).map((l: any) => ({
+      ...l,
+      _key: uid(),
+      compra: {
+        proveedor:        compra.proveedor ?? null,
+        proveedorNombre:  compra.proveedorNombre ?? null,
+        fecha:            compra.fecha,
+        fotoTicketBase64: compra.fotoTicketBase64 ?? null,
+      },
+    }));
+    setComprasOrden((prev: any) => [...prev, ...nuevasLineas]);
+
+    const nuevosRepuestos = (compra.repuestosCreados ?? []).map((r: any) => ({ ...r, _key: uid() }));
+    if (nuevosRepuestos.length) {
+      setRepuestos((prev: any) => [...prev, ...nuevosRepuestos]);
+    }
+
+    setMostrarCompra(false);
+    setOkMsg("Compra registrada. Se ha añadido como recambio de la orden.");
+  };
 
   // ---- Servicios libres (trabajo / mano de obra suelta) ----
   const addServicioLibre = () =>
@@ -456,6 +495,41 @@ export default function TecnicoOrdenDetalle({
         )}
       </div>
 
+      {/* Compra de materiales */}
+      <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-gray-900">Compra de materiales</h2>
+          <button type="button" onClick={() => setMostrarCompra(true)} className="flex items-center gap-1 text-xs font-medium text-[#00C2FF]">
+            <Plus size={14} /> Registrar compra
+          </button>
+        </div>
+        {comprasOrden.length === 0 ? (
+          <div className="text-xs text-gray-400 pb-1">
+            Úsalo cuando compres materiales por tu cuenta para este trabajo (ferretería, recambios...).
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {comprasOrden.map((lc: any) => {
+              const nombreProveedor = lc.compra?.proveedor?.nombre ?? lc.compra?.proveedorNombre ?? "Proveedor sin especificar";
+              return (
+                <div key={lc._key} className="flex items-center justify-between border border-gray-100 rounded-lg px-3 py-2">
+                  <div className="min-w-0">
+                    <div className="text-sm text-gray-800 truncate">{lc.descripcion}</div>
+                    <div className="text-xs text-gray-400 truncate">{nombreProveedor} · {lc.cantidad} ud</div>
+                  </div>
+                  <div className="text-sm font-semibold text-gray-700 shrink-0 ml-2">
+                    {(Number(lc.cantidad) * Number(lc.precioCoste)).toFixed(2)} €
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
+        <p className="text-[11px] text-gray-400 mt-3">
+          Se añade automáticamente como recambio de la orden con el precio de venta que indiques.
+        </p>
+      </div>
+
       {/* Servicios / trabajo suelto */}
       <div className="bg-white rounded-xl border border-gray-100 p-4 mb-4">
         <div className="flex items-center justify-between mb-3">
@@ -558,6 +632,26 @@ export default function TecnicoOrdenDetalle({
             >
               {guardando ? "Guardando..." : "Guardar firma y completar"}
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Modal compra de materiales */}
+      {mostrarCompra && (
+        <div className="fixed inset-0 bg-black/40 z-30 flex items-end sm:items-center justify-center p-4">
+          <div className="bg-white rounded-xl w-full max-w-md p-4 max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900">Compra de materiales</h3>
+              <button onClick={() => setMostrarCompra(false)}><X size={18} className="text-gray-400" /></button>
+            </div>
+            <TecnicoCompraForm
+              ordenId={orden.id}
+              proveedores={proveedores}
+              productos={productos}
+              tecnicoId={tecnicoId}
+              onCancel={() => setMostrarCompra(false)}
+              onSaved={handleCompraGuardada}
+            />
           </div>
         </div>
       )}

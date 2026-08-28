@@ -9,15 +9,20 @@ export async function GET(req: NextRequest) {
   const empresaId = (session.user as any).empresaId;
   const { searchParams } = new URL(req.url);
   const proveedorId = searchParams.get("proveedorId");
+  const tecnicoId    = searchParams.get("tecnicoId");
+  const ordenId      = searchParams.get("ordenId");
 
   const compras = await prisma.compra.findMany({
     where: {
       empresaId,
       ...(proveedorId && { proveedorId }),
+      ...(tecnicoId    && { tecnicoId }),
+      ...(ordenId      && { lineas: { some: { ordenId } } }),
     },
     include: {
       proveedor: { select: { id: true, nombre: true } },
-      lineas:    true,
+      tecnico:   { select: { id: true, nombre: true } },
+      lineas:    { include: { orden: { select: { id: true, numero: true } } } },
       _count:    { select: { lineas: true } },
     },
     orderBy: { fecha: "desc" },
@@ -31,23 +36,44 @@ export async function POST(req: NextRequest) {
   if (!session?.user?.id) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const empresaId = (session.user as any).empresaId;
-  const body      = await req.json();
-  const { fecha, numeroAlbaran, proveedorId, proveedorNombre, observaciones, lineas } = body;
+  if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
+
+  const body = await req.json();
+  const {
+    fecha, numeroAlbaran, proveedorId, proveedorNombre, observaciones,
+    fotoTicketBase64, tecnicoId, lineas,
+  } = body;
 
   if (!lineas?.length) {
     return NextResponse.json({ error: "Añade al menos una línea" }, { status: 400 });
   }
 
+  // Seguridad: si alguna línea va ligada a una orden concreta (compra de
+  // materiales hecha sobre la marcha para ese trabajo), comprobar que esa
+  // orden pertenece de verdad a la empresa del usuario antes de tocar nada.
+  const ordenIds = [...new Set(lineas.map((l: any) => l.ordenId).filter(Boolean))] as string[];
+  if (ordenIds.length) {
+    const ordenesValidas = await prisma.orden.findMany({
+      where:  { id: { in: ordenIds }, empresaId },
+      select: { id: true },
+    });
+    if (ordenesValidas.length !== ordenIds.length) {
+      return NextResponse.json({ error: "Alguna de las órdenes indicadas no es válida" }, { status: 400 });
+    }
+  }
+
   const total = lineas.reduce((acc: number, l: any) => acc + l.cantidad * l.precioCoste, 0);
 
-  const compra = await prisma.$transaction(async (tx) => {
+  const { compra, repuestosCreados } = await prisma.$transaction(async (tx) => {
     const compra = await tx.compra.create({
       data: {
-        fecha:           fecha ? new Date(fecha) : new Date(),
-        numeroAlbaran:   numeroAlbaran ?? null,
-        proveedorId:     proveedorId   ?? null,
-        proveedorNombre: proveedorNombre ?? null,
-        observaciones:   observaciones  ?? null,
+        fecha:            fecha ? new Date(fecha) : new Date(),
+        numeroAlbaran:    numeroAlbaran    ?? null,
+        proveedorId:      proveedorId      ?? null,
+        proveedorNombre:  proveedorNombre  ?? null,
+        observaciones:    observaciones    ?? null,
+        fotoTicketBase64: fotoTicketBase64 ?? null,
+        tecnicoId:        tecnicoId        ?? null,
         total,
         empresaId,
         lineas: {
@@ -90,8 +116,28 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    return compra;
+    // Líneas ligadas a una orden concreta: material comprado sobre la
+    // marcha para ese trabajo. Se refleja también como recambio facturable
+    // de esa orden, además de quedar el registro de la compra en sí.
+    const repuestosCreados = [];
+    for (const linea of lineas) {
+      if (linea.ordenId) {
+        const repuesto = await tx.repuesto.create({
+          data: {
+            ordenId:     linea.ordenId,
+            referencia:  linea.referencia ?? null,
+            descripcion: linea.descripcion,
+            cantidad:    parseFloat(linea.cantidad),
+            precioCoste: parseFloat(linea.precioCoste),
+            precioVenta: parseFloat(linea.precioVenta),
+          },
+        });
+        repuestosCreados.push(repuesto);
+      }
+    }
+
+    return { compra, repuestosCreados };
   });
 
-  return NextResponse.json(compra, { status: 201 });
+  return NextResponse.json({ ...compra, repuestosCreados }, { status: 201 });
 }

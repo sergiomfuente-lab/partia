@@ -57,6 +57,7 @@ model Usuario {
   clientes            Cliente[]
   dni                 String?
   ordenesAsignadas    Orden[]
+  comprasRegistradas  Compra[]
 }
 
 model ContadorFactura {
@@ -383,18 +384,25 @@ model Producto {
 }
 
 model Compra {
-  id              String        @id @default(cuid())
-  fecha           DateTime      @default(now())
-  numeroAlbaran   String?
-  proveedorId     String?
-  proveedor       Proveedor?    @relation(fields: [proveedorId], references: [id])
-  proveedorNombre String?
-  total           Float         @default(0)
-  observaciones   String?
-  empresaId       String
-  empresa         Empresa       @relation(fields: [empresaId], references: [id])
-  lineas          CompraLinea[]
-  createdAt       DateTime      @default(now())
+  id               String        @id @default(cuid())
+  fecha            DateTime      @default(now())
+  numeroAlbaran    String?
+  proveedorId      String?
+  proveedor        Proveedor?    @relation(fields: [proveedorId], references: [id])
+  proveedorNombre  String?
+  total            Float         @default(0)
+  observaciones    String?
+  // Foto del ticket/albaran (compras registradas por el tecnico desde el
+  // movil, sin poder guardar el papel fisico).
+  fotoTicketBase64 String?
+  // Tecnico que registro la compra (opcional: tambien la puede dar de alta
+  // la oficina manualmente, sin tecnico asociado).
+  tecnicoId        String?
+  tecnico          Usuario?      @relation(fields: [tecnicoId], references: [id])
+  empresaId        String
+  empresa          Empresa       @relation(fields: [empresaId], references: [id])
+  lineas           CompraLinea[]
+  createdAt        DateTime      @default(now())
 }
 
 model CompraLinea {
