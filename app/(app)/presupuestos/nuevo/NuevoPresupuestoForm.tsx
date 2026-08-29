@@ -7,6 +7,7 @@ import {
   ArrowLeft, FileText, Save, Plus,
   Trash2, Wrench, Package,
 } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
 
 type Cliente      = { id: string; nombre: string; precioHoraEspecial: number | null; precioPorKmEspecial: number | null };
 type Maquina      = { id: string; marca: string; modelo: string; numeroDeSerie: string };
@@ -265,29 +266,33 @@ export default function NuevoPresupuestoForm({
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                     Cliente <span className="text-red-400">*</span>
                   </label>
-                  <select value={form.clienteId}
-                    onChange={(e) => { setField("clienteId", e.target.value); setField("maquinaId", ""); }}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
-                    <option value="">Selecciona un cliente...</option>
-                    {clientes.map((c) => (
-                      <option key={c.id} value={c.id}>{c.nombre}</option>
-                    ))}
-                  </select>
+                  <SearchableSelect
+                    value={form.clienteId}
+                    onChange={(v) => { setField("clienteId", v); setField("maquinaId", ""); }}
+                    options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
+                    placeholder="Selecciona un cliente..."
+                    emptyMessage="Ningún cliente coincide con la búsqueda."
+                  />
                 </div>
 
                 <div>
                   <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                     Máquina (opcional)
                   </label>
-                  <select value={form.maquinaId}
-                    onChange={(e) => setField("maquinaId", e.target.value)}
+                  <SearchableSelect
+                    value={form.maquinaId}
+                    onChange={(v) => setField("maquinaId", v)}
+                    options={[
+                      { value: "", label: "Sin máquina asociada" },
+                      ...maquinas.map((m) => ({
+                        value: m.id,
+                        label: `${m.marca} ${m.modelo} — ${m.numeroDeSerie}`,
+                      })),
+                    ]}
                     disabled={!form.clienteId}
-                    className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700 disabled:opacity-50">
-                    <option value="">Sin máquina asociada</option>
-                    {maquinas.map((m) => (
-                      <option key={m.id} value={m.id}>{m.marca} {m.modelo} — {m.numeroDeSerie}</option>
-                    ))}
-                  </select>
+                    placeholder="Sin máquina asociada"
+                    emptyMessage="Este cliente no tiene máquinas."
+                  />
                 </div>
 
                 <div>

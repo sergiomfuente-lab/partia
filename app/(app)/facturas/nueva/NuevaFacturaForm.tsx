@@ -7,6 +7,7 @@ import {
   ArrowLeft, FileText, Save, Plus, Trash2,
   Wrench, Package, CheckSquare, Square,
 } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
 
 type Cliente      = { id: string; nombre: string; precioHoraEspecial: number | null; precioPorKmEspecial: number | null; plazoPagoDias: number | null };
 type TipoServicio = { id: string; nombre: string; unidad: string };
@@ -317,14 +318,13 @@ export default function NuevaFacturaForm({
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
                       Cliente <span className="text-red-400">*</span>
                     </label>
-                    <select value={form.clienteId}
-                      onChange={(e) => { setField("clienteId", e.target.value); setOrdenesSeleccionadas([]); }}
-                      className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
-                      <option value="">Selecciona un cliente...</option>
-                      {clientes.map((c) => (
-                        <option key={c.id} value={c.id}>{c.nombre}</option>
-                      ))}
-                    </select>
+                    <SearchableSelect
+                      value={form.clienteId}
+                      onChange={(v) => { setField("clienteId", v); setOrdenesSeleccionadas([]); }}
+                      options={clientes.map((c) => ({ value: c.id, label: c.nombre }))}
+                      placeholder="Selecciona un cliente..."
+                      emptyMessage="Ningún cliente coincide con la búsqueda."
+                    />
                   </div>
                 </div>
 

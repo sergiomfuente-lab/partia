@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeft, MapPin, FileText, UserPlus, Wrench as WrenchIcon } from "lucide-react";
+import SearchableSelect from "@/components/SearchableSelect";
 
 type Cliente = { id: string; nombre: string; nombreComercial?: string | null };
 
@@ -194,16 +195,14 @@ export default function TecnicoNuevaOrdenForm({
             </div>
 
             {modoCliente === "existente" ? (
-              <select
+              <SearchableSelect
                 value={clienteId}
-                onChange={(e) => { setClienteId(e.target.value); setMaquinaId(""); setModoMaquina("existente"); }}
-                className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:border-[#00C2FF]"
-              >
-                <option value="">Selecciona un cliente...</option>
-                {clientes.map((c) => (
-                  <option key={c.id} value={c.id}>{c.nombreComercial || c.nombre}</option>
-                ))}
-              </select>
+                onChange={(v) => { setClienteId(v); setMaquinaId(""); setModoMaquina("existente"); }}
+                options={clientes.map((c) => ({ value: c.id, label: c.nombreComercial || c.nombre }))}
+                placeholder="Selecciona un cliente..."
+                emptyMessage="Ningún cliente coincide con la búsqueda."
+                size="base"
+              />
             ) : (
               <div className="space-y-2.5">
                 <input
@@ -257,25 +256,24 @@ export default function TecnicoNuevaOrdenForm({
 
             {!mostrarMaquinaNueva ? (
               <>
-                <select
+                <SearchableSelect
                   value={maquinaId}
-                  onChange={(e) => setMaquinaId(e.target.value)}
+                  onChange={(v) => setMaquinaId(v)}
+                  options={maquinas.map((m) => ({
+                    value: m.id,
+                    label: `${m.marca} ${m.modelo} — ${m.numeroDeSerie} (${m.horasActuales}h)`,
+                  }))}
                   disabled={!clienteId || cargandoMaquinas}
-                  className="w-full px-3 py-2.5 text-base border border-gray-200 rounded-lg bg-white text-gray-700 focus:outline-none focus:border-[#00C2FF] disabled:opacity-50"
-                >
-                  <option value="">
-                    {!clienteId
+                  placeholder={
+                    !clienteId
                       ? "Primero selecciona un cliente"
                       : cargandoMaquinas
                         ? "Cargando máquinas..."
-                        : "Selecciona una máquina..."}
-                  </option>
-                  {maquinas.map((m) => (
-                    <option key={m.id} value={m.id}>
-                      {m.marca} {m.modelo} — {m.numeroDeSerie} ({m.horasActuales}h)
-                    </option>
-                  ))}
-                </select>
+                        : "Selecciona una máquina..."
+                  }
+                  emptyMessage="Este cliente no tiene máquinas activas."
+                  size="base"
+                />
                 {clienteId && !cargandoMaquinas && maquinas.length === 0 && (
                   <p className="text-xs text-gray-400 mt-1.5">Este cliente no tiene máquinas activas.</p>
                 )}
