@@ -7,10 +7,11 @@ export default async function ClientesPage() {
   const session = await auth();
   if (!session) redirect("/login");
 
-  const usuarioId = (session.user as any).id as string;
+  const empresaId = (session.user as any).empresaId as string | undefined;
+  if (!empresaId) redirect("/dashboard");
 
   const clientes = await prisma.cliente.findMany({
-    where: { usuarioId },
+    where: { empresaId },
     include: { _count: { select: { maquinas: true, ordenes: true } } },
     orderBy: { nombre: "asc" },
   });

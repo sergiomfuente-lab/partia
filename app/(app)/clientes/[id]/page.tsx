@@ -7,13 +7,18 @@ export default async function ClienteDetallePage({ params }: { params: Promise<{
   const session = await auth();
   if (!session) redirect("/login");
 
+  const empresaId = (session.user as any).empresaId as string | undefined;
+  if (!empresaId) redirect("/dashboard");
+
   const { id } = await params;
 
   const cliente = await prisma.cliente.findFirst({
-    where: { id },
+    where: { id, empresaId },
     include: {
       maquinas: true,
       ordenes: {
+        // La firma (imagen base64) pesa mucho y esta pantalla no la usa
+        omit: { firmaBase64: true },
         include: {
           maquina: true,
           servicios: {

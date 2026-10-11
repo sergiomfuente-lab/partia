@@ -9,8 +9,11 @@ export default async function OrdenesPage() {
   const session = await auth();
   if (!session?.user?.id) redirect("/login");
 
+  const empresaId = (session.user as any).empresaId as string | undefined;
+  if (!empresaId) redirect("/dashboard");
+
   const clientes = await prisma.cliente.findMany({
-    where: { usuarioId: session.user!.id, activo: true },
+    where: { empresaId, activo: true },
     select: { id: true, nombre: true },
     orderBy: { nombre: "asc" },
   });

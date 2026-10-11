@@ -8,9 +8,11 @@ export default async function EditarMaquinaPage({ params }: { params: Promise<{ 
   if (!session?.user?.id) redirect("/login");
 
   const { id } = await params;
+  const empresaId = (session.user as any).empresaId as string | undefined;
+  if (!empresaId) redirect("/dashboard");
 
   const maquina = await prisma.maquina.findFirst({
-    where: { id, cliente: { usuarioId: session.user!.id } },
+    where: { id, cliente: { empresaId } },
     include: {
       cliente: { select: { id: true, nombre: true } },
     },

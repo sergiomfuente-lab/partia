@@ -127,7 +127,7 @@ export async function POST(req: NextRequest) {
       const nuevaFactura = await tx.factura.create({
         data: {
           numero, clienteId, empresaId,
-          serieId:        serieId ?? null,
+          serieId:        serieId || null,
           fecha:          fechaFactura,
           vencimiento:    vencimiento ? new Date(vencimiento) : null,
           baseImponible,
@@ -227,7 +227,7 @@ export async function POST(req: NextRequest) {
       const nuevaFactura = await tx.factura.create({
         data: {
           numero, clienteId, empresaId,
-          serieId:        serieId ?? null,
+          serieId:        serieId || null,
           fecha:          fechaFactura,
           vencimiento:    vencimiento ? new Date(vencimiento) : null,
           baseImponible,

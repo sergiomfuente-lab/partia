@@ -62,8 +62,9 @@ export default async function NuevaFacturaPage({
       })
     : [];
 
-  const seriePredeterminada = series.find((s) => s.predeterminada) ?? series[0];
-  const serieSeleccionada   = series.find((s) => s.id === serieId) ?? seriePredeterminada;
+  // Por defecto no se usa serie: la factura sale con el formato Nº_DD-MM-AAAA.
+  // Solo se preselecciona una serie si llega en la URL (?serieId=...).
+  const serieSeleccionada = serieId ? series.find((s) => s.id === serieId) : undefined;
 
   return (
     <NuevaFacturaForm

@@ -41,3 +41,8 @@ yarn-error.log*
 next-env.d.ts
 
 /app/generated/prisma
+
+# Datos reales exportados de Bubble para la migracion y copias de seguridad (no subir al repo)
+migracion-bubble/
+_backups/
+Claude outputs/

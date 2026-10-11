@@ -176,7 +176,6 @@ export default function NuevaFacturaForm({
     setError("");
 
     if (!form.clienteId) { setError("Selecciona un cliente."); return; }
-    if (!form.serieId)   { setError("Selecciona una serie de facturación."); return; }
 
     if (!esDirecta && ordenesSeleccionadas.length === 0) {
       setError("Selecciona al menos una orden."); return;
@@ -190,7 +189,7 @@ export default function NuevaFacturaForm({
     const body = esDirecta
       ? {
           clienteId:      form.clienteId,
-          serieId:        form.serieId,
+          serieId:        form.serieId || null,
           fecha:          form.fecha,
           vencimiento:    form.vencimiento || null,
           tipoDescuento:  form.tipoDescuento,
@@ -228,7 +227,7 @@ export default function NuevaFacturaForm({
         }
       : {
           clienteId:      form.clienteId,
-          serieId:        form.serieId,
+          serieId:        form.serieId || null,
           fecha:          form.fecha,
           vencimiento:    form.vencimiento || null,
           tipoDescuento:  form.tipoDescuento,
@@ -268,7 +267,7 @@ export default function NuevaFacturaForm({
               {esDirecta ? "Nueva factura directa" : "Nueva factura desde órdenes"}
             </h1>
             <p className="text-sm text-gray-400 mt-0.5">
-              {serieActual ? `Serie: ${serieActual.nombre} (${serieActual.prefijo})` : "Selecciona una serie"}
+              {serieActual ? `Serie: ${serieActual.nombre} (${serieActual.prefijo})` : "Numeración: Nº_DD-MM-AAAA"}
             </p>
           </div>
         </div>
@@ -301,12 +300,12 @@ export default function NuevaFacturaForm({
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-500 uppercase tracking-wide mb-1.5">
-                      Serie <span className="text-red-400">*</span>
+                      Numeración
                     </label>
                     <select value={form.serieId}
                       onChange={(e) => setField("serieId", e.target.value)}
                       className="w-full px-3 py-2.5 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700">
-                      <option value="">Selecciona una serie...</option>
+                      <option value="">Nº_DD-MM-AAAA (por defecto)</option>
                       {series.map((s) => (
                         <option key={s.id} value={s.id}>
                           {s.nombre} ({s.prefijo}) {s.predeterminada ? "— Predeterminada" : ""}
