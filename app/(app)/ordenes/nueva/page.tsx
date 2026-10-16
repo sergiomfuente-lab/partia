@@ -30,7 +30,7 @@ export default async function NuevaOrdenPage() {
       select: { precioHora: true, precioPorKm: true },
     }),
     prisma.usuario.findMany({
-      where:   { empresaId, rol: "tecnico", activo: true },
+      where:   { empresaId, rol: { not: "superadmin" }, activo: true },
       select:  { id: true, nombre: true },
       orderBy: { nombre: "asc" },
     }),

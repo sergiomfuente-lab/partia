@@ -10,12 +10,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
   if (!empresaId) return NextResponse.json({ error: "Sin empresa asignada" }, { status: 403 });
   const { id }    = await params;
 
-  const [orden, empresa, tecnico] = await Promise.all([
+  const [orden, empresa] = await Promise.all([
     prisma.orden.findFirst({
       where: { id, empresaId },
       include: {
         cliente:         true,
         maquina:         true,
+        // Técnico que realizó el trabajo (no el usuario que imprime el PDF)
+        tecnico:         { select: { nombre: true, dni: true } },
         servicios:       { include: { tipoServicio: true }, orderBy: { fecha: "asc" } },
         serviciosLibres: true,
         repuestos:       true,
@@ -31,10 +33,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
         logoBase64: true, textoRgpd: true,
       },
     }),
-    prisma.usuario.findUnique({
-      where:  { id: session.user.id },
-      select: { nombre: true, dni: true },
-    }),
   ]);
 
   if (!orden) return NextResponse.json({ error: "Orden no encontrada" }, { status: 404 });
@@ -48,7 +46,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
     OrdenPDF({
       orden:          JSON.parse(JSON.stringify(orden)),
       empresa:        JSON.parse(JSON.stringify(empresa ?? {})),
-      tecnico:        JSON.parse(JSON.stringify(tecnico ?? {})),
+      tecnico:        JSON.parse(JSON.stringify(orden.tecnico ?? {})),
       mostrarPrecios,
     })
   );

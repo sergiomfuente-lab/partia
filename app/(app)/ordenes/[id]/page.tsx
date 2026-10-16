@@ -12,7 +12,8 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
   const { id }    = await params;
   const empresaId = (session.user as any).empresaId;
 
-  const orden = await prisma.orden.findFirst({
+  const [orden, tecnicos] = await Promise.all([
+   prisma.orden.findFirst({
     where: { id, empresaId },
     include: {
       cliente:  true,
@@ -37,9 +38,16 @@ export default async function OrdenDetallePage({ params }: { params: Promise<{ i
       },
       factura: { select: { id: true, numero: true, estado: true } },
     },
-  });
+   }),
+   // Personas que pueden figurar como técnico en el parte (activas, o la ya asignada)
+   prisma.usuario.findMany({
+    where:   { empresaId, rol: { not: "superadmin" }, OR: [{ activo: true }, { ordenesAsignadas: { some: { id } } }] },
+    select:  { id: true, nombre: true },
+    orderBy: { nombre: "asc" },
+   }),
+  ]);
 
   if (!orden) redirect("/ordenes");
 
-  return <OrdenDetalle orden={JSON.parse(JSON.stringify(orden))} />;
+  return <OrdenDetalle orden={JSON.parse(JSON.stringify(orden))} tecnicos={tecnicos} />;
 }

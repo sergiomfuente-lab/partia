@@ -27,8 +27,11 @@ const formatHoras = (horas: number) => {
   return `${h}h ${m}min`;
 };
 
-export default function OrdenDetalle({ orden }: { orden: any }) {
+export default function OrdenDetalle({ orden, tecnicos = [] }: { orden: any; tecnicos?: { id: string; nombre: string }[] }) {
   const router = useRouter();
+  const [tecnicoId, setTecnicoId]             = useState<string>(orden.tecnicoId ?? "");
+  const [guardandoTecnico, setGuardandoTecnico] = useState(false);
+  const [errorTecnico, setErrorTecnico]       = useState("");
   const [cambiandoEstado, setCambiandoEstado] = useState(false);
   const [mostrarFirma, setMostrarFirma]       = useState(false);
   const [firmaDni, setFirmaDni]               = useState(orden.firmaDni ?? "");
@@ -51,6 +54,27 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
   const ultimoPuntoRef = useRef<{ x: number; y: number } | null>(null);
 
   const estadoInfo = ESTADO_CONFIG[orden.estado] ?? ESTADO_CONFIG.pendiente;
+
+  // El técnico que figura en el PDF se puede cambiar aquí antes de imprimir.
+  const cambiarTecnico = async (nuevo: string) => {
+    const anterior = tecnicoId;
+    setTecnicoId(nuevo);
+    setGuardandoTecnico(true);
+    setErrorTecnico("");
+    try {
+      const res = await fetch(`/api/ordenes/${orden.id}`, {
+        method:  "PUT",
+        headers: { "Content-Type": "application/json" },
+        body:    JSON.stringify({ tecnicoId: nuevo || null }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setTecnicoId(anterior);
+      setErrorTecnico("No se pudo guardar el técnico.");
+    } finally {
+      setGuardandoTecnico(false);
+    }
+  };
 
   const totalServicios = (orden.servicios ?? []).reduce((a: number, s: any) => a + s.cantidad * s.precio, 0);
   const totalLibres    = (orden.serviciosLibres ?? []).reduce((a: number, s: any) => a + s.cantidad * s.precio, 0);
@@ -239,7 +263,24 @@ export default function OrdenDetalle({ orden }: { orden: any }) {
           </div>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 items-end">
+          <div className="flex flex-col mr-1">
+            <label className="text-[10px] font-medium text-gray-400 uppercase tracking-wide mb-1">
+              Técnico en el PDF {guardandoTecnico ? "· guardando..." : ""}
+            </label>
+            <select
+              value={tecnicoId}
+              disabled={guardandoTecnico}
+              onChange={(e) => cambiarTecnico(e.target.value)}
+              className="px-3 py-2 text-sm border border-gray-200 rounded-lg focus:outline-none focus:border-[#00C2FF] bg-white text-gray-700 disabled:opacity-60"
+            >
+              <option value="">Sin asignar</option>
+              {tecnicos.map((t) => (
+                <option key={t.id} value={t.id}>{t.nombre}</option>
+              ))}
+            </select>
+            {errorTecnico && <span className="text-[11px] text-red-500 mt-1">{errorTecnico}</span>}
+          </div>
           <button
             onClick={() => setMostrarFirma(true)}
             className="flex items-center gap-2 border border-purple-200 text-purple-600 rounded-lg px-4 py-2 text-sm hover:bg-purple-50 transition-colors cursor-pointer"
